@@ -1,0 +1,536 @@
+@import './tokens.css';
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  color: var(--fg-normal);
+  -webkit-font-smoothing: antialiased;
+  background: var(--color-background);
+}
+
+* { box-sizing: border-box; }
+
+button { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+input, textarea, select { font-family: inherit; }
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.006em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, color 120ms;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-sm { height: 32px; padding: 0 12px; border-radius: 6px; font-size: 13px; }
+.btn-md { height: 40px; padding: 0 14px; border-radius: 8px; font-size: 14px; }
+.btn-lg { height: 48px; padding: 0 18px; border-radius: 8px; font-size: 16px; }
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-primary:active { background: var(--color-primary-press); }
+.btn-primary:disabled { background: var(--color-line); cursor: not-allowed; }
+.btn-assistive { background: rgba(112, 115, 124, 0.1); color: var(--fg-strong); }
+.btn-outlined { background: transparent; color: var(--fg-strong); border-color: var(--color-line-strong); }
+.btn-outlined:hover { background: rgba(0, 0, 0, 0.04); }
+.btn-text { background: transparent; color: var(--color-primary); padding: 0 8px; }
+.btn-negative { background: var(--color-negative); color: #fff; }
+
+/* ── Field ───────────────────────────────────────────────────── */
+.field {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: #fff;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--fg-strong);
+  outline: none;
+}
+.field::placeholder { color: var(--fg-assistive); }
+.field:focus-within,
+.field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+
+input.field, textarea.field, select.field { width: 100%; }
+textarea.field {
+  height: auto;
+  min-height: 96px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+/* ── Chip ────────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--fg-normal);
+  background: #fff;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.chip:hover { border-color: var(--color-line-strong); }
+.chip-active { background: var(--fg-strong); color: #fff; border-color: var(--fg-strong); }
+.chip-soft { background: var(--color-primary-soft); color: var(--color-primary); border-color: transparent; }
+
+/* ── Badge ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.badge-positive { background: rgba(0, 191, 64, 0.14); color: #008c30; }
+.badge-negative { background: rgba(255, 66, 66, 0.14); color: #d03131; }
+.badge-info { background: rgba(0, 152, 178, 0.14); color: #006b80; }
+.badge-accent { background: rgba(151, 71, 255, 0.14); color: #6b2fb7; }
+.badge-neutral { background: rgba(112, 115, 124, 0.14); color: var(--fg-normal); }
+
+/* ──────────────────────────────────────────────────────────────
+   App shell — responsive web app layout
+   - Mobile:  full-screen, bottom tab bar
+   - Desktop: left sidebar (260px) + main content (max 900px)
+   ────────────────────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--color-background);
+}
+
+.app-sidebar {
+  display: none;
+  flex-direction: column;
+  width: 260px;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--color-line-soft);
+  background: var(--neutral-99);
+  padding: 24px 16px 16px;
+  flex-shrink: 0;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100dvh;
+  position: relative;
+  background: var(--color-background);
+}
+
+@media (min-width: 1024px) {
+  body { background: var(--neutral-95); }
+  .app-shell {
+    max-width: 1240px;
+    margin: 0 auto;
+  }
+  .app-sidebar { display: flex; }
+  .app-main {
+    max-width: 980px;
+    width: 100%;
+    background: var(--color-background);
+    border-left: 1px solid var(--color-line-soft);
+    border-right: 1px solid var(--color-line-soft);
+  }
+}
+
+/* ── Sidebar nav ─────────────────────────────────────────────── */
+.sidenav-logo {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--fg-strong);
+  padding: 0 12px 24px;
+}
+.sidenav-section-label {
+  padding: 14px 12px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--fg-alternative);
+  text-transform: uppercase;
+}
+.sidenav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-normal);
+  cursor: pointer;
+  transition: background-color 120ms, color 120ms;
+  position: relative;
+}
+.sidenav-item:hover { background: rgba(0,0,0,0.04); color: var(--fg-strong); }
+.sidenav-item.active {
+  background: rgba(0,102,255,0.08);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.sidenav-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-negative);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.sidenav-user {
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--color-line-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Top Bar (in-app) ────────────────────────────────────────── */
+.topbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--color-line-soft);
+  background: var(--common-0);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-shrink: 0;
+}
+.topbar-back, .topbar-action {
+  width: 40px; height: 40px; border: 0; background: transparent;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--fg-strong); position: relative; border-radius: 8px;
+}
+.topbar-action:hover, .topbar-back:hover { background: rgba(0,0,0,0.04); }
+.topbar-title {
+  flex: 1; font-size: 16px; font-weight: 700;
+  color: var(--fg-strong); letter-spacing: -0.01em;
+  padding: 0 8px;
+}
+
+/* On desktop the in-page back button is redundant when reaching via sidebar,
+   but keep it for hierarchical flows. */
+
+/* ── Bottom Tab Bar — mobile only ────────────────────────────── */
+.tabbar {
+  height: 64px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--color-line-soft);
+  background: var(--common-0);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+}
+.tabbar-item {
+  border: 0; background: transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; cursor: pointer; padding: 8px 0;
+  color: var(--fg-alternative);
+  position: relative;
+  text-decoration: none;
+}
+.tabbar-item.active { color: var(--color-primary); }
+.tabbar-label { font-size: 10.5px; font-weight: 500; }
+.tabbar-item.active .tabbar-label { font-weight: 700; }
+
+@media (min-width: 1024px) {
+  .tabbar { display: none; }
+}
+
+/* ── Scrollable content region ───────────────────────────────── */
+.scroll-region {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Floating Action Button ──────────────────────────────────── */
+.fab {
+  position: fixed;
+  right: 24px;
+  bottom: 88px;
+  width: 56px; height: 56px;
+  border-radius: 28px;
+  border: 0;
+  display: grid; place-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  cursor: pointer;
+  z-index: 4;
+  transition: transform 100ms;
+}
+.fab:active { transform: scale(0.96); }
+.fab-dark { background: var(--fg-strong); color: #fff; }
+.fab-primary { background: var(--color-primary); color: #fff; box-shadow: 0 4px 16px rgba(0,102,255,0.32); }
+
+@media (min-width: 1024px) {
+  .fab {
+    position: fixed;
+    right: max(32px, calc((100vw - 1240px) / 2 + 32px));
+    bottom: 32px;
+  }
+}
+
+/* ── Chat input ──────────────────────────────────────────────── */
+.bubble-input {
+  flex: 1; height: 40px; border-radius: 20px;
+  background: var(--neutral-95); border: 0;
+  padding: 0 16px; font-size: 14px;
+  color: var(--fg-strong); outline: none;
+}
+.bubble-input::placeholder { color: var(--fg-alternative); }
+
+/* ── Gallery (showcase) page ─────────────────────────────────── */
+.canvas {
+  min-height: 100vh;
+  padding: 48px 40px 80px;
+  background-color: #f0eee9;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.canvas h1 {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 800; letter-spacing: -0.025em;
+  color: var(--fg-strong); margin: 0 0 8px;
+}
+.canvas .lead {
+  font-size: 14px; color: var(--fg-alternative); margin: 0 0 32px;
+}
+.canvas .gallery-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.canvas .gallery-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 120ms, box-shadow 120ms;
+}
+.canvas .gallery-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.canvas .gallery-card .code {
+  font-size: 11px; font-weight: 700; color: var(--color-primary); letter-spacing: 0.06em;
+}
+.canvas .gallery-card .name {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 700; color: var(--fg-strong); margin-top: 4px;
+}
+.canvas .gallery-card .sub {
+  font-size: 12px; color: var(--fg-alternative); margin-top: 6px; line-height: 1.5;
+}
+.canvas .section-title {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--fg-strong); margin: 32px 0 12px;
+}
+
+/* ── Interactive utilities ───────────────────────────────────── */
+.pressable {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.pressable:hover { background-color: rgba(0,0,0,0.03); }
+.pressable:active { transform: scale(0.985); }
+
+.linkrow {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.linkrow:hover { background: rgba(0,0,0,0.025); }
+
+/* ────────────────────────────────────────────────────────────
+   Motion — keyframes
+   ──────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-up-lg {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up-sheet {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-left {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.4); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0,102,255,0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(0,102,255,0); }
+}
+
+/* ── Motion — utility classes ──────────────────────────────── */
+.anim-fade        { animation: fade-in    var(--dur-base) var(--ease-out) both; }
+.anim-fade-up     { animation: fade-up    var(--dur-base) var(--ease-out) both; }
+.anim-fade-up-lg  { animation: fade-up-lg var(--dur-slow) var(--ease-out) both; }
+.anim-fade-down   { animation: fade-down  var(--dur-base) var(--ease-out) both; }
+.anim-slide-left  { animation: slide-left var(--dur-base) var(--ease-out) both; }
+.anim-pop-in      { animation: pop-in     var(--dur-slow) var(--ease-spring) both; }
+.anim-pop         { animation: pop        260ms var(--ease-spring); }
+.anim-spin        { animation: spin       0.9s linear infinite; }
+.anim-pulse       { animation: pulse-soft 1.6s var(--ease-in-out) infinite; }
+.anim-ring        { animation: ring-pulse 1.2s var(--ease-out) infinite; }
+
+/* Staggered entrance: parent .stagger > children */
+.stagger > * { animation: fade-up var(--dur-base) var(--ease-out) both; opacity: 0; }
+.stagger > *:nth-child(1)  { animation-delay: 20ms; }
+.stagger > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger > *:nth-child(3)  { animation-delay: 100ms; }
+.stagger > *:nth-child(4)  { animation-delay: 140ms; }
+.stagger > *:nth-child(5)  { animation-delay: 180ms; }
+.stagger > *:nth-child(6)  { animation-delay: 220ms; }
+.stagger > *:nth-child(7)  { animation-delay: 260ms; }
+.stagger > *:nth-child(8)  { animation-delay: 300ms; }
+.stagger > *:nth-child(9)  { animation-delay: 340ms; }
+.stagger > *:nth-child(10) { animation-delay: 380ms; }
+.stagger > *:nth-child(n+11) { animation-delay: 420ms; }
+
+/* Route enter — applied to wrapper whose key changes on path */
+.route-enter { animation: fade-up var(--dur-base) var(--ease-out) both; }
+
+/* Sheet (filter modal) */
+.sheet-backdrop { animation: fade-in var(--dur-base) var(--ease-out) both; }
+.sheet-surface  { animation: slide-up-sheet var(--dur-slow) var(--ease-out) both; }
+
+/* Heart toggle: when state changes the SVG inside gets .anim-pop */
+.heart-btn[data-on="true"] .heart-icon { animation: pop 260ms var(--ease-spring); }
+
+/* Chip / button micro-press */
+.chip, .btn, .topbar-action, .topbar-back,
+.tabbar-item, .sidenav-item, .fab {
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-instant) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.chip:active, .btn:active,
+.topbar-action:active, .topbar-back:active,
+.tabbar-item:active, .sidenav-item:active {
+  transform: scale(0.96);
+}
+.fab:active { transform: scale(0.92); }
+
+/* Toggle switch — keep nice timing */
+.switch-track { transition: background-color var(--dur-fast) var(--ease-standard); }
+.switch-thumb { transition: left var(--dur-base) var(--ease-spring), transform var(--dur-fast) var(--ease-out); }
+
+/* Card lift on hover (desktop only — does nothing on touch) */
+.card-lift { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+@media (hover: hover) {
+  .card-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.06); }
+}
+
+/* Sidebar active indicator (smooth color/bg already animated by transitions above) */
+.sidenav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  animation: slide-left var(--dur-base) var(--ease-out) both;
+}
+
+/* Tabbar active icon bump */
+.tabbar-item.active svg { animation: pop 320ms var(--ease-spring); }
+
+/* Loading shimmer (for any future skeletons) */
+.skeleton {
+  background: linear-gradient(90deg, var(--neutral-95), var(--neutral-90), var(--neutral-95));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 6px;
+}
+
+/* Disable animations & transitions during pointer drag (subtle perf win) */
+.no-anim, .no-anim * { animation: none !important; transition: none !important; }

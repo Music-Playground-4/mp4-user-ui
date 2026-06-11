@@ -1,0 +1,94 @@
+:root {
+  /* ── Wanted DS · neutrals ─────────────────────────────────── */
+  --common-100: rgb(0, 0, 0);
+  --common-0: rgb(255, 255, 255);
+  --neutral-99: rgb(247, 247, 248);
+  --neutral-95: rgb(244, 244, 245);
+  --neutral-90: rgb(234, 235, 237);
+  --neutral-80: rgb(219, 220, 223);
+  --neutral-70: rgb(194, 196, 200);
+  --neutral-60: rgb(174, 176, 182);
+  --neutral-50: rgb(152, 155, 162);
+  --neutral-40: rgb(112, 115, 124);
+  --neutral-30: rgb(85, 88, 96);
+  --neutral-22: rgb(55, 56, 60);
+  --neutral-20: rgb(46, 47, 51);
+  --neutral-15: rgb(37, 38, 41);
+  --neutral-10: rgb(27, 28, 30);
+  --neutral-5: rgb(23, 23, 25);
+
+  --cool-neutral-99: rgb(247, 248, 250);
+  --cool-neutral-95: rgb(241, 243, 246);
+  --cool-neutral-90: rgb(229, 232, 237);
+  --cool-neutral-80: rgb(207, 211, 218);
+  --cool-neutral-50: rgb(141, 146, 156);
+  --cool-neutral-30: rgb(76, 81, 91);
+  --cool-neutral-15: rgb(36, 40, 47);
+  --cool-neutral-10: rgb(27, 31, 36);
+  --cool-neutral-5: rgb(20, 25, 30);
+
+  --blue-99: rgb(234, 242, 254);
+  --blue-95: rgb(214, 230, 254);
+  --blue-90: rgb(184, 213, 254);
+  --blue-80: rgb(124, 178, 254);
+  --blue-65: rgb(51, 133, 255);
+  --blue-50: rgb(0, 102, 255);
+  --blue-45: rgb(0, 94, 235);
+  --blue-40: rgb(0, 84, 211);
+  --blue-30: rgb(0, 60, 160);
+
+  --red-50: rgb(255, 66, 66);
+  --green-50: rgb(0, 191, 64);
+  --green-99: rgb(229, 247, 234);
+  --cyan-50: rgb(0, 152, 178);
+  --violet-50: rgb(151, 71, 255);
+
+  --color-background: var(--common-0);
+  --color-background-elevated: var(--common-0);
+  --color-background-neutral: var(--neutral-99);
+
+  --color-line: rgba(112, 115, 124, 0.22);
+  --color-line-strong: rgba(112, 115, 124, 0.45);
+  --color-line-soft: rgba(112, 115, 124, 0.12);
+
+  --fg-strong: rgb(23, 23, 25);
+  --fg-normal: rgba(46, 47, 51, 0.88);
+  --fg-alternative: rgba(55, 56, 60, 0.61);
+  --fg-assistive: rgba(55, 56, 60, 0.28);
+
+  --color-primary: var(--blue-50);
+  --color-primary-hover: var(--blue-45);
+  --color-primary-press: var(--blue-40);
+  --color-primary-soft: var(--blue-99);
+
+  --color-positive: var(--green-50);
+  --color-negative: var(--red-50);
+  --color-informative: var(--cyan-50);
+  --color-accent: var(--violet-50);
+
+  --font-sans: 'Pretendard JP', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'SF Pro Text', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+  --font-display: 'Wanted Sans', 'Wanted Sans Variable', 'Pretendard JP',
+    system-ui, sans-serif;
+
+  /* ── Motion tokens ──────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 340ms;
+  --dur-slower: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
