@@ -91,16 +91,27 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
           {seller && (
             <>
               <div style={{ height: 1, background: 'var(--color-line-soft)', margin: '16px 0' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => router.push(`/users/${seller.id}`)}
+                className="pressable"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  background: 'transparent', border: 0, padding: '4px 0', borderRadius: 8,
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+                aria-label={`${seller.name} 판매자 프로필 보기`}
+              >
                 <img src={seller.avatar} alt={seller.name} style={{ width: 44, height: 44, borderRadius: 22 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>{seller.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--fg-alternative)' }}>{seller.position} · {seller.level} · 거래 12회</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>
                   4.9 ★
+                  <Icon name="chevR" size={16} color="var(--fg-assistive)" />
                 </div>
-              </div>
+              </button>
             </>
           )}
 

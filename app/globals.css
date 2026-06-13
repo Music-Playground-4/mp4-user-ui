@@ -9,7 +9,20 @@ html, body {
   background: var(--color-background);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  /* 모바일에서 탭 시 파란색 하이라이트 제거 */
+  -webkit-tap-highlight-color: transparent;
+  /* 스크롤바 숨김 (스크롤 기능은 유지) — Firefox / 구 Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+/* 스크롤바 숨김 — Chrome / Safari / 신 Edge */
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* 탭 가능한 요소의 포커스 외곽선도 마우스가 아닌 경우 숨김(키보드 접근성은 유지) */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) { outline: none; }
 
 button { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -471,8 +484,11 @@ textarea.field {
 .stagger > *:nth-child(10) { animation-delay: 380ms; }
 .stagger > *:nth-child(n+11) { animation-delay: 420ms; }
 
-/* Route enter — applied to wrapper whose key changes on path */
-.route-enter { animation: fade-up var(--dur-base) var(--ease-out) both; }
+/* Route enter — applied to wrapper whose key changes on path.
+   fill-mode는 backwards만 사용: 입장 애니메이션은 유지하되, 끝난 뒤 transform이
+   남지 않게 한다. (transform이 남으면 그 요소가 position:fixed 자식의 기준이 되어
+   FAB 등 고정 요소가 화면이 아닌 콘텐츠 맨 아래에 붙는 문제가 생김) */
+.route-enter { animation: fade-up var(--dur-base) var(--ease-out) backwards; }
 
 /* Sheet (filter modal) */
 .sheet-backdrop { animation: fade-in var(--dur-base) var(--ease-out) both; }

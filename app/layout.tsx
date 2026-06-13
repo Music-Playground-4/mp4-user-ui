@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppFrame } from '@/components/app/AppFrame';
+import { AuthProvider } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'MP4 — 음악인을 위한 매칭 플랫폼',
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <AppFrame>{children}</AppFrame>
+        <AuthProvider>
+          <AppFrame>{children}</AppFrame>
+        </AuthProvider>
       </body>
     </html>
   );

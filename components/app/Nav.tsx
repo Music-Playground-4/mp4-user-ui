@@ -21,12 +21,10 @@ export function TopBar({ title, showBack = true, backHref, right }: TopBarProps)
   };
   return (
     <div className="topbar">
-      {showBack ? (
+      {showBack && (
         <button type="button" className="topbar-back" onClick={onBack} aria-label="뒤로">
           <Icon name="chevL" size={22} />
         </button>
-      ) : (
-        <div style={{ width: 40 }} />
       )}
       <div className="topbar-title">{title}</div>
       <div style={{ display: 'flex', gap: 2 }}>{right}</div>

@@ -5,7 +5,7 @@ export type IconName =
   | 'chevR' | 'chevL' | 'chevD' | 'chevU' | 'close' | 'filter' | 'bell'
   | 'pin' | 'check' | 'music' | 'play' | 'pause' | 'mic' | 'headset'
   | 'waveform' | 'spark' | 'badgeNew' | 'map' | 'settings' | 'speaker'
-  | 'users' | 'info' | 'tag' | 'star';
+  | 'users' | 'info' | 'tag' | 'star' | 'grid' | 'list';
 
 interface IconProps {
   name: IconName;
@@ -47,6 +47,8 @@ const PATHS: Record<IconName, (color: string) => React.ReactNode> = {
   info: () => (<><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></>),
   tag: (c) => (<><path d="M3 11V4h7l11 11-7 7L3 11z"/><circle cx="7.5" cy="7.5" r="1.2" fill={c}/></>),
   star: () => (<><path d="M12 4l2.4 5.2 5.6.7-4.2 4 1.1 5.6L12 17l-4.9 2.5 1.1-5.6-4.2-4 5.6-.7L12 4z"/></>),
+  grid: () => (<><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></>),
+  list: () => (<><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></>),
 };
 
 export function Icon({ name, size = 20, color = 'currentColor', strokeWidth = 1.6, style }: IconProps) {

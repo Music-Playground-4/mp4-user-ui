@@ -16,7 +16,7 @@ export default function MyProfilePage() {
   return (
     <>
       <TopBar
-        title=""
+        title="마이페이지"
         showBack={false}
         right={
           <>

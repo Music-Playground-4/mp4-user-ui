@@ -2,94 +2,151 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
+import { Field, Spinner, StepBar } from '@/components/ui/AuthForm';
+import { useAuth } from '@/lib/auth';
+import { ApiError } from '@/lib/api';
 
-const OPTS = [
-  { id: 'play', label: '합주·세션', sub: '정기·단기 멤버를 찾아요', count: '5,200명' },
-  { id: 'perform', label: '공연·무대', sub: '팀을 꾸려 무대에 서요', count: '2,800명' },
-  { id: 'trade', label: '장비 거래', sub: '악기·이펙터를 사고 팔아요', count: '8,100명' },
-  { id: 'learn', label: '음악 입문', sub: '처음 시작해요', count: '1,400명' },
-];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupPage() {
   const router = useRouter();
-  const [selected, setSelected] = useState<Set<string>>(new Set(['play', 'perform']));
+  const { signup } = useAuth();
 
-  const toggle = (id: string) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [agree, setAgree] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (k: string) => setTouched((t) => ({ ...t, [k]: true }));
+
+  const nameError = name.trim().length === 0 ? '이름(닉네임)을 입력해 주세요' : null;
+  const emailError =
+    email.trim().length === 0 ? '이메일을 입력해 주세요'
+    : !EMAIL_RE.test(email.trim()) ? '이메일 형식을 확인해 주세요'
+    : null;
+  const passwordError =
+    password.length === 0 ? '비밀번호를 입력해 주세요'
+    : password.length < 8 ? '비밀번호는 8자 이상이어야 해요'
+    : null;
+  const confirmError =
+    confirm.length === 0 ? '비밀번호를 한 번 더 입력해 주세요'
+    : confirm !== password ? '비밀번호가 일치하지 않아요'
+    : null;
+
+  const canSubmit = !nameError && !emailError && !passwordError && !confirmError && agree && !submitting;
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched({ name: true, email: true, password: true, confirm: true });
+    if (nameError || emailError || passwordError || confirmError || !agree) return;
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      await signup({ name: name.trim(), email: email.trim(), password });
+      router.push('/signup/activity');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '회원가입에 실패했어요. 다시 시도해 주세요');
+      setSubmitting(false);
+    }
   };
 
   return (
     <>
       <TopBar title="" backHref="/splash" />
-      <div style={{ flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} style={{
-              flex: 1, height: 3, borderRadius: 2,
-              background: i === 1 ? 'var(--color-primary)' : 'var(--color-line)',
-            }} />
-          ))}
-        </div>
+      <form onSubmit={onSubmit} noValidate style={{ flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column' }}>
+        <StepBar step={1} />
 
         <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-strong)', letterSpacing: '-0.02em', marginBottom: 6 }}>
-          어떤 활동을 하고 계세요?
+          계정을 만들어요
         </div>
-        <div style={{ fontSize: 13, color: 'var(--fg-alternative)', marginBottom: 24 }}>
-          여러 항목을 선택할 수 있어요
+        <div style={{ fontSize: 13, color: 'var(--fg-alternative)', marginBottom: 28 }}>
+          이메일과 비밀번호로 가입해요
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {OPTS.map((o) => {
-            const sel = selected.has(o.id);
-            return (
-              <button
-                type="button"
-                key={o.id}
-                onClick={() => toggle(o.id)}
-                style={{
-                  padding: '14px 16px',
-                  border: `1.5px solid ${sel ? 'var(--color-primary)' : 'var(--color-line)'}`,
-                  borderRadius: 12,
-                  background: sel ? 'rgba(0,102,255,0.04)' : '#fff',
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-strong)' }}>{o.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-alternative)', marginTop: 2 }}>
-                    {o.sub} · <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{o.count}</span>
-                  </div>
-                </div>
-                <div style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  border: `1.5px solid ${sel ? 'var(--color-primary)' : 'var(--color-line-strong)'}`,
-                  background: sel ? 'var(--color-primary)' : 'transparent',
-                  display: 'grid', placeItems: 'center', flexShrink: 0,
-                }}>
-                  {sel && <Icon name="check" size={12} strokeWidth={3} color="#fff" />}
-                </div>
-              </button>
-            );
-          })}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Field
+            label="이름 (닉네임)"
+            type="text"
+            value={name}
+            onChange={setName}
+            onBlur={() => touch('name')}
+            placeholder="활동에 사용할 이름"
+            autoComplete="nickname"
+            error={touched.name ? nameError : null}
+          />
+          <Field
+            label="이메일"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            onBlur={() => touch('email')}
+            placeholder="example@mp4.app"
+            autoComplete="email"
+            error={touched.email ? emailError : null}
+          />
+          <Field
+            label="비밀번호"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            onBlur={() => touch('password')}
+            placeholder="8자 이상"
+            autoComplete="new-password"
+            error={touched.password ? passwordError : null}
+          />
+          <Field
+            label="비밀번호 확인"
+            type="password"
+            value={confirm}
+            onChange={setConfirm}
+            onBlur={() => touch('confirm')}
+            placeholder="비밀번호 재입력"
+            autoComplete="new-password"
+            error={touched.confirm ? confirmError : null}
+          />
         </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 18, fontSize: 13, color: 'var(--fg-normal)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: 'var(--color-primary)' }}
+          />
+          <span>
+            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>이용약관</span> 및{' '}
+            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>개인정보 처리방침</span>에 동의해요
+          </span>
+        </label>
+
+        {error && (
+          <div role="alert" style={{ marginTop: 14, fontSize: 13, color: 'var(--color-negative)' }}>
+            {error}
+          </div>
+        )}
 
         <div style={{ flex: 1, minHeight: 24 }} />
-        <button
-          type="button"
-          onClick={() => router.push('/profile-setup')}
-          disabled={selected.size === 0}
-          className="btn btn-lg btn-primary"
-          style={{ width: '100%', marginTop: 24 }}
-        >
-          다음 ({selected.size})
+        <button type="submit" disabled={!canSubmit} className="btn btn-lg btn-primary" style={{ width: '100%', marginTop: 16 }}>
+          {submitting ? <Spinner /> : '다음'}
         </button>
-      </div>
+
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: 'var(--fg-alternative)' }}>
+          이미 계정이 있나요?{' '}
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            style={{ background: 'none', border: 0, padding: 0, color: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer' }}
+          >
+            로그인
+          </button>
+        </div>
+      </form>
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
+import { StepBar } from '@/components/ui/AuthForm';
 import { POSITIONS, GENRES } from '@/lib/data';
 
 const LEVELS = ['입문 6개월차', '입문 1년', '취미 2~3년', '경력 5년 이상', '세션·강사'];
@@ -29,16 +30,9 @@ export default function ProfileSetupPage() {
 
   return (
     <>
-      <TopBar title="" backHref="/signup" />
+      <TopBar title="" backHref="/signup/activity" />
       <div style={{ flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} style={{
-              flex: 1, height: 3, borderRadius: 2,
-              background: i <= 2 ? 'var(--color-primary)' : 'var(--color-line)',
-            }} />
-          ))}
-        </div>
+        <StepBar step={3} />
 
         <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--fg-strong)', letterSpacing: '-0.02em', marginBottom: 6 }}>
           연주하는 악기를 알려주세요
@@ -116,7 +110,7 @@ export default function ProfileSetupPage() {
         <div style={{ flex: 1, minHeight: 24 }} />
         <button
           type="button"
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/signup/complete')}
           disabled={positions.size === 0}
           className="btn btn-lg btn-primary"
           style={{ width: '100%', marginTop: 16 }}

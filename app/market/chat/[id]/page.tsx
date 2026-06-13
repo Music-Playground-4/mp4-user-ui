@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, use } from 'react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
@@ -51,12 +52,20 @@ export default function MarketChatPage({ params }: { params: Promise<{ id: strin
         padding: '10px 16px', background: 'var(--neutral-99)', display: 'flex', gap: 10,
         alignItems: 'center', borderBottom: '1px solid var(--color-line-soft)', flexShrink: 0,
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: 6, background: `url(${g.images?.[0]}) center/cover` }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: 'var(--fg-alternative)' }}>{reserved ? '예약중' : '거래중'}</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-strong)', marginTop: 1 }}>{formatPrice(g.price)}</div>
-        </div>
+        <Link
+          href={`/market/${g.id}`}
+          className="pressable"
+          style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, borderRadius: 6 }}
+          aria-label="상품 상세 보기"
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 6, background: `url(${g.images?.[0]}) center/cover`, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'var(--fg-alternative)' }}>{reserved ? '예약중' : '거래중'}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-strong)', marginTop: 1 }}>{formatPrice(g.price)}</div>
+          </div>
+          <Icon name="chevR" size={16} color="var(--fg-assistive)" />
+        </Link>
         <button
           type="button"
           onClick={() => setReserved(!reserved)}
