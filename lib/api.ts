@@ -13,12 +13,12 @@ const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '')
 /** 실제 API 연결 여부. false 면 mock 모드로 동작. */
 export const isApiConfigured = BASE_URL.length > 0;
 
-/** 백엔드 스펙 확정 시 경로만 바꾸면 됩니다. */
+/** 백엔드 스펙 확정 시 경로만 바꾸면 됩니다. BASE_URL 은 오리진까지만, 경로에 /api 를 포함합니다. */
 const ENDPOINTS = {
-  login: '/auth/login',
-  signup: '/auth/signup',
-  logout: '/auth/logout',
-  me: '/auth/me',
+  login: '/api/auth/login',
+  signup: '/api/auth/signup',
+  logout: '/api/auth/logout',
+  me: '/api/auth/me',
 } as const;
 
 /* ── 타입 ─────────────────────────────────────────────────────── */
@@ -26,7 +26,8 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
+  /** 백엔드는 아바타 미설정 시 null 을 내려줍니다. */
+  avatar?: string | null;
 }
 
 export interface AuthResult {
@@ -84,17 +85,39 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     throw new ApiError(0, '네트워크 연결을 확인해 주세요');
   }
 
-  const data = await res.json().catch(() => null);
+  const json = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message =
-      (data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-        ? data.message
-        : null) ?? defaultErrorMessage(res.status);
-    throw new ApiError(res.status, message, data);
+    throw new ApiError(res.status, errorMessageOf(json) ?? defaultErrorMessage(res.status), json);
   }
 
-  return data as T;
+  return unwrapData<T>(json);
+}
+
+/**
+ * 실패 응답에서 사람이 읽는 메시지를 꺼냅니다.
+ * 백엔드 표준은 `{ success: false, error, code }` 이므로 `error` 를 먼저 봅니다.
+ * (`message` 는 표준을 벗어난 응답에 대한 대비)
+ */
+function errorMessageOf(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const body = json as Record<string, unknown>;
+  for (const key of ['error', 'message'] as const) {
+    const value = body[key];
+    if (typeof value === 'string' && value.length > 0) return value;
+  }
+  return null;
+}
+
+/**
+ * 성공 응답은 항상 `{ success, data, message }` 로 감싸여 오므로 `data` 만 반환합니다.
+ * 래퍼가 없는 응답(예: 204 후 null)은 그대로 흘려보냅니다.
+ */
+function unwrapData<T>(json: unknown): T {
+  if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+    return (json as { data: T }).data;
+  }
+  return json as T;
 }
 
 function defaultErrorMessage(status: number): string {
