@@ -19,6 +19,10 @@ const ENDPOINTS = {
   signup: '/api/auth/signup',
   logout: '/api/auth/logout',
   me: '/api/auth/me',
+  myProfile: '/api/users',
+  userProfile: (id: string) => `/api/users/${id}`,
+  userReviews: (id: string) => `/api/users/${id}/reviews`,
+  userTrust: (id: string) => `/api/users/${id}/trust`,
 } as const;
 
 /* ── 타입 ─────────────────────────────────────────────────────── */
@@ -45,6 +49,110 @@ export interface SignupPayload {
   email: string;
   password: string;
 }
+
+/* ── 유저 / 프로필 ────────────────────────────────────────────── */
+
+/** 목록 응답 공통 형태. 채팅 메시지만 cursor 방식이라 이 타입을 쓰지 않습니다. */
+export interface Paged<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/**
+ * 프로필. 주의: 가입 시 받은 `name` 과 프로필의 `nickname` 은 서로 다른 필드이고,
+ * /api/users 응답에는 `name` 이 포함되지 않습니다. 표시 이름은 displayName() 으로 구하세요.
+ */
+export interface UserProfile {
+  id: string;
+  email?: string;
+  nickname: string | null;
+  avatar: string | null;
+  bio: string | null;
+  phone?: string | null;
+  position: string | null;
+  region: string | null;
+  genres: string[];
+  level: string | null;
+  activityTypes?: string[];
+  phoneVerified?: boolean;
+  role?: string;
+  createdAt?: string;
+  /** 공개 프로필에만 포함 */
+  items?: unknown[];
+  reviewsReceived?: unknown[];
+  _count?: Record<string, number>;
+}
+
+export interface ProfilePayload {
+  nickname?: string;
+  bio?: string;
+  phone?: string;
+  avatar?: string;
+  position?: string;
+  region?: string;
+  genres?: string[];
+  level?: string;
+  activityTypes?: string[];
+}
+
+export interface TrustItem {
+  key: string;
+  label: string;
+  points: number;
+  earned: boolean;
+}
+
+export interface TrustScore {
+  score: number;
+  level: 'S' | 'A' | 'B' | 'C';
+  items: TrustItem[];
+}
+
+export interface Review {
+  id: string;
+  rating: number;
+  content: string | null;
+  createdAt: string;
+  reviewer?: { id: string; nickname: string | null; avatar: string | null };
+}
+
+export type ReviewList = Paged<Review> & { avgRating: number };
+
+/** 화면에 보여줄 이름. nickname 이 비면 세션의 name, 그것도 없으면 안내 문구. */
+export function displayName(
+  profile: Pick<UserProfile, 'nickname'> | null,
+  fallback?: string | null,
+): string {
+  return profile?.nickname?.trim() || fallback?.trim() || '이름 미설정';
+}
+
+export const usersApi = {
+  /** 내 프로필 (email·activityTypes·_count 포함) */
+  me(token: string): Promise<UserProfile> {
+    return request<UserProfile>(ENDPOINTS.myProfile, { token });
+  },
+
+  /** 프로필·온보딩 수정 */
+  update(token: string, payload: ProfilePayload): Promise<UserProfile> {
+    return request<UserProfile>(ENDPOINTS.myProfile, { method: 'PATCH', body: payload, token });
+  },
+
+  /** 공개 프로필 (보유 매물 items·받은 후기 포함). 비로그인도 조회 가능 */
+  byId(id: string, token?: string | null): Promise<UserProfile> {
+    return request<UserProfile>(ENDPOINTS.userProfile(id), { token });
+  },
+
+  reviews(id: string): Promise<ReviewList> {
+    return request<ReviewList>(ENDPOINTS.userReviews(id));
+  },
+
+  trust(id: string): Promise<TrustScore> {
+    return request<TrustScore>(ENDPOINTS.userTrust(id));
+  },
+};
 
 /* ── 에러 ─────────────────────────────────────────────────────── */
 export class ApiError extends Error {
