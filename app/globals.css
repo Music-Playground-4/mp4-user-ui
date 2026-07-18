@@ -458,6 +458,12 @@ textarea.field {
   100% { box-shadow: 0 0 0 12px rgba(0,102,255,0); }
 }
 
+/* 스켈레톤 로딩 — components/ui/State.tsx 의 Skeleton 이 사용 */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
 /* ── Motion — utility classes ──────────────────────────────── */
 .anim-fade        { animation: fade-in    var(--dur-base) var(--ease-out) both; }
 .anim-fade-up     { animation: fade-up    var(--dur-base) var(--ease-out) both; }

@@ -37,6 +37,8 @@ type AuthStatus = 'loading' | 'authenticated' | 'guest';
 
 interface AuthContextValue {
   user: AuthUser | null;
+  /** 인증이 필요한 API 호출에 넘길 Bearer 토큰. 게스트면 null. */
+  token: string | null;
   status: AuthStatus;
   login: (payload: LoginPayload) => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
@@ -47,21 +49,23 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
 
   // 최초 마운트 시 저장된 토큰으로 세션 복원
   useEffect(() => {
-    const token = readToken();
-    if (!token) {
+    const saved = readToken();
+    if (!saved) {
       setStatus('guest');
       return;
     }
     let cancelled = false;
     authApi
-      .me(token)
+      .me(saved)
       .then((u) => {
         if (cancelled) return;
         setUser(u);
+        setToken(saved);
         setStatus('authenticated');
       })
       .catch(() => {
@@ -78,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user } = await authApi.login(payload);
     writeToken(token);
     setUser(user);
+    setToken(token);
     setStatus('authenticated');
   }, []);
 
@@ -85,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user } = await authApi.signup(payload);
     writeToken(token);
     setUser(user);
+    setToken(token);
     setStatus('authenticated');
   }, []);
 
@@ -92,12 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authApi.logout(readToken());
     clearToken();
     setUser(null);
+    setToken(null);
     setStatus('guest');
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, signup, logout }),
-    [user, status, login, signup, logout],
+    () => ({ user, token, status, login, signup, logout }),
+    [user, token, status, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
