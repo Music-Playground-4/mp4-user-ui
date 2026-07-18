@@ -1,137 +1,189 @@
 'use client';
 
-import { useState, use } from 'react';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useState, use, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
-import { postById, USERS } from '@/lib/data';
-
-type Status = 'pending' | 'accepted' | 'rejected';
-
-interface Applicant {
-  uid: string;
-  match: number;
-  gear: number;
-  level: string;
-  position: string;
-  tags: string[];
-  dist: string;
-  when: string;
-  highlights: string[];
-}
-
-const APPLICANTS: Applicant[] = [
-  { uid: 'u1', match: 92, gear: 2, level: '입문 6개월', position: '기타', tags: ['인디록', '얼터너티브'], dist: '1.8km', when: '5분 전', highlights: ['보유 장비 검증', '거주지 가까움'] },
-  { uid: 'u3', match: 78, gear: 5, level: '15년차', position: '드럼', tags: ['하드록', '메탈'], dist: '14km', when: '2시간 전', highlights: ['장르 약간 차이', '경력 풍부'] },
-  { uid: 'u4', match: 64, gear: 0, level: '입문 1년', position: '기타', tags: ['시티팝', '인디팝'], dist: '4.2km', when: '어제', highlights: ['장비 미등록'] },
-];
+import { Avatar } from '@/components/ui/Avatar';
+import { LoadingState, ErrorState, EmptyState, LoginRequired } from '@/components/ui/State';
+import { useAuth } from '@/lib/auth';
+import { useAsync, errorText } from '@/lib/useApi';
+import { sessionsApi, displayName, applicantOf, type Application, type Paged, type RecruitPost } from '@/lib/api';
 
 export default function SessionApplicantsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const p = postById(id);
-  if (!p) notFound();
+  const { token, status } = useAuth();
 
-  const [statuses, setStatuses] = useState<Record<string, Status>>({});
-  const setStatus = (uid: string, s: Status) => setStatuses({ ...statuses, [uid]: s });
+  const post = useAsync<RecruitPost>(() => sessionsApi.detail(id, token), [id, token]);
+  const list = useAsync<Paged<Application>>(
+    token ? () => sessionsApi.applicants(token, id) : null,
+    [token, id],
+  );
+
+  // 수락/거절 결과를 낙관적으로 반영한다 (목록 전체 재조회 없이)
+  const [overrides, setOverrides] = useState<Record<string, Application['status']>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const decide = useCallback(
+    async (appId: string, next: 'ACCEPTED' | 'REJECTED') => {
+      if (!token || busyId) return;
+      const prev = overrides[appId];
+      setOverrides((o) => ({ ...o, [appId]: next }));
+      setBusyId(appId);
+      setError(null);
+      try {
+        await sessionsApi.decide(token, id, appId, next);
+      } catch (e) {
+        setOverrides((o) => ({ ...o, [appId]: prev ?? 'PENDING' }));
+        setError(errorText(e));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token, id, busyId, overrides],
+  );
+
+  if (status === 'guest') {
+    return (
+      <>
+        <TopBar title="지원자" />
+        <div className="scroll-region"><LoginRequired /></div>
+      </>
+    );
+  }
+
+  const applicants = list.data?.items ?? [];
 
   return (
     <>
-      <TopBar
-        title={`지원자 (${APPLICANTS.length})`}
-        right={
-          <button type="button" style={{
-            padding: '0 12px', height: 32, border: 0, background: 'transparent',
-            fontSize: 13, color: 'var(--fg-alternative)',
-            display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer',
-          }}>
-            매칭순<Icon name="chevD" size={14} />
-          </button>
-        }
-      />
+      <TopBar title={`지원자${applicants.length ? ` (${applicants.length})` : ''}`} />
 
       <div style={{ padding: '10px 16px', background: 'var(--blue-99)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <Icon name="spark" size={14} color="var(--color-primary)" strokeWidth={2.2} />
         <div style={{ fontSize: 12, color: 'var(--fg-normal)' }}>
-          모집 포지션 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{p.positions.join('·')}</span> 매칭률 순으로 정렬됩니다
+          모집 악기{' '}
+          <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>
+            {post.data?.instruments.join('·') ?? '-'}
+          </span>
         </div>
       </div>
 
-      <div className="scroll-region stagger">
-        {APPLICANTS.map((a) => {
-          const u = USERS.find((x) => x.id === a.uid);
-          if (!u) return null;
-          const matchBg = a.match >= 85 ? 'var(--green-99)' : a.match >= 70 ? 'var(--blue-99)' : 'var(--neutral-95)';
-          const matchFg = a.match >= 85 ? '#008C30' : a.match >= 70 ? 'var(--color-primary)' : 'var(--fg-alternative)';
-          const status = statuses[a.uid];
+      <div className="scroll-region stagger" style={{ padding: '12px 16px 24px' }}>
+        {list.loading && <LoadingState rows={3} />}
 
-          return (
-            <div key={a.uid} style={{ padding: '16px', borderBottom: '1px solid var(--color-line-soft)', display: 'flex', gap: 12, opacity: status === 'rejected' ? 0.5 : 1, transition: 'opacity var(--dur-base) var(--ease-out)' }}>
-              <img src={u.avatar} alt={u.name} style={{ width: 44, height: 44, borderRadius: 22, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>{u.name}</div>
-                  <div style={{
-                    height: 18, padding: '0 6px', background: matchBg, color: matchFg,
-                    borderRadius: 9, fontSize: 10, fontWeight: 700,
-                    display: 'inline-flex', alignItems: 'center',
-                  }}>
-                    매칭 {a.match}%
-                  </div>
-                  {status === 'accepted' && <span className="badge badge-positive" style={{ fontSize: 10 }}>수락</span>}
-                  {status === 'rejected' && <span className="badge badge-neutral" style={{ fontSize: 10 }}>거절</span>}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--fg-alternative)', marginBottom: 6 }}>
-                  {a.position} · {a.level} · {a.dist} · {a.when}
-                </div>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                  {a.tags.map((t) => (
-                    <span key={t} className="chip" style={{ height: 20, padding: '0 6px', fontSize: 10 }}>{t}</span>
-                  ))}
-                  <span style={{
-                    height: 20, padding: '0 6px', borderRadius: 10, fontSize: 10,
-                    background: 'var(--blue-99)', color: 'var(--color-primary)',
-                    display: 'inline-flex', alignItems: 'center', gap: 2, fontWeight: 600,
-                  }}>
-                    <Icon name="speaker" size={9} strokeWidth={2.2} /> 장비 {a.gear}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                  {a.highlights.map((h) => (
-                    <span key={h} style={{ fontSize: 10.5, color: 'var(--fg-alternative)' }}>· {h}</span>
-                  ))}
-                </div>
-                {!status && (
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button type="button" style={{ height: 32, padding: '0 12px', borderRadius: 6, border: '1px solid var(--color-line)', background: '#fff', fontSize: 12, fontWeight: 600, color: 'var(--fg-normal)', cursor: 'pointer' }}>
-                      프로필 보기
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatus(a.uid, 'accepted')}
-                      style={{ height: 32, padding: '0 12px', borderRadius: 6, border: 0, background: 'var(--color-primary)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      수락
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatus(a.uid, 'rejected')}
-                      style={{ height: 32, padding: '0 12px', borderRadius: 6, border: '1px solid var(--color-line)', background: '#fff', fontSize: 12, color: 'var(--fg-alternative)', cursor: 'pointer' }}
-                    >
-                      거절
-                    </button>
-                  </div>
-                )}
-                {status === 'accepted' && (
-                  <Link href={`/sessions/${p.id}/chat`} style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>
-                    채팅방으로 이동 →
-                  </Link>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {!list.loading && list.error && (
+          <ErrorState
+            message={list.status === 403 ? '모집글 작성자만 지원자를 볼 수 있어요' : list.error}
+            onRetry={list.status === 403 ? undefined : list.reload}
+          />
+        )}
+
+        {!list.loading && !list.error && applicants.length === 0 && (
+          <EmptyState message="아직 지원자가 없어요" hint="모집글을 공유해 보세요." />
+        )}
+
+        {error && (
+          <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: 'var(--color-negative)' }}>{error}</div>
+        )}
+
+        {!list.loading && !list.error && applicants.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {applicants.map((a) => (
+              <ApplicantCard
+                key={a.id}
+                app={a}
+                status={overrides[a.id] ?? a.status}
+                busy={busyId === a.id}
+                onDecide={(s) => decide(a.id, s)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </>
+  );
+}
+
+function ApplicantCard({
+  app,
+  status,
+  busy,
+  onDecide,
+}: {
+  app: Application;
+  status: Application['status'];
+  busy: boolean;
+  onDecide: (s: 'ACCEPTED' | 'REJECTED') => void;
+}) {
+  const router = useRouter();
+  const u = applicantOf(app);
+  const name = displayName(u);
+  const decided = status !== 'PENDING';
+
+  return (
+    <div style={{ padding: 14, border: '1px solid var(--color-line)', borderRadius: 12, background: '#fff', opacity: status === 'REJECTED' ? 0.6 : 1 }}>
+      <button
+        type="button"
+        onClick={() => u && router.push(`/users/${u.id}`)}
+        className="pressable"
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left' }}
+      >
+        <Avatar src={u?.avatar} name={name} size={44} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>{name}</span>
+            {status === 'ACCEPTED' && (
+              <span className="badge" style={{ background: 'rgba(0,140,48,0.12)', color: 'var(--color-positive)', fontSize: 10 }}>수락됨</span>
+            )}
+            {status === 'REJECTED' && <span className="badge badge-neutral" style={{ fontSize: 10 }}>거절함</span>}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--fg-alternative)', marginTop: 2 }}>
+            {[u?.position, u?.region, u?.level].filter(Boolean).join(' · ') || '프로필 정보 없음'}
+          </div>
+        </div>
+        <Icon name="chevR" size={16} color="var(--fg-assistive)" />
+      </button>
+
+      {app.message && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--neutral-99)', borderRadius: 8, fontSize: 12.5, lineHeight: 1.6, color: 'var(--fg-normal)', whiteSpace: 'pre-wrap' }}>
+          {app.message}
+        </div>
+      )}
+
+      {app.portfolio && (
+        <a
+          href={app.portfolio}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}
+        >
+          <Icon name="play" size={12} /> 포트폴리오 보기
+        </a>
+      )}
+
+      {!decided && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={() => onDecide('REJECTED')}
+            disabled={busy}
+            className="btn btn-md btn-outlined"
+            style={{ flex: 1 }}
+          >
+            거절
+          </button>
+          <button
+            type="button"
+            onClick={() => onDecide('ACCEPTED')}
+            disabled={busy}
+            className="btn btn-md btn-primary"
+            style={{ flex: 1.5 }}
+          >
+            수락하기
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -255,6 +255,10 @@ export function normalizeImages(images: (string | ItemImage)[] | undefined | nul
  * 화면이 이 차이를 몰라도 되도록 여기서 흡수한다.
  */
 function toPaged<T>(raw: unknown): Paged<T> {
+  // 지원자 목록처럼 data 가 페이징 없이 배열로만 오는 엔드포인트도 있다
+  if (Array.isArray(raw)) {
+    return { items: raw as T[], total: raw.length, page: 1, limit: raw.length, totalPages: 1 };
+  }
   const box = (raw ?? {}) as Record<string, unknown>;
   const list = (box.items ?? box.posts ?? box.results ?? []) as T[];
   return {
@@ -300,6 +304,144 @@ export const marketApi = {
     return toPaged<MarketItem>(raw);
   },
 };
+
+/* ── 세션 · 공연 모집 ─────────────────────────────────────────── */
+
+export interface RecruitPost {
+  id: string;
+  title: string;
+  description?: string;
+  genres: string[];
+  instruments: string[];
+  location: string;
+  pay: string | null;
+  recruitCount: number;
+  deadline: string | null;
+  status: string;
+  authorId?: string;
+  createdAt: string;
+  author: SellerSummary;
+  _count?: { applications?: number };
+  /** 세션 전용 */
+  freq?: string | null;
+  level?: string | null;
+  /** 공연 전용 */
+  venue?: string | null;
+  date?: string | null;
+}
+
+export interface RecruitQuery {
+  page?: number;
+  limit?: number;
+  genre?: string;
+  instrument?: string;
+  location?: string;
+  q?: string;
+}
+
+export interface RecruitPayload {
+  title: string;
+  description: string;
+  genres: string[];
+  instruments: string[];
+  location: string;
+  pay?: string;
+  recruitCount?: number;
+  deadline?: string;
+  /** 세션 전용 */
+  freq?: string;
+  level?: string;
+  /** 공연 전용 */
+  venue?: string;
+  date?: string;
+}
+
+export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export type Applicant = SellerSummary & {
+  position?: string | null;
+  level?: string | null;
+  region?: string | null;
+};
+
+export interface Application {
+  id: string;
+  status: ApplicationStatus;
+  message: string | null;
+  portfolio: string | null;
+  createdAt: string;
+  postId?: string;
+  userId?: string;
+  /** 백엔드가 내려주는 실제 키. applicantOf() 로 꺼내 쓴다. */
+  user?: Applicant;
+  /** 문서상 이름 — 실제 응답에는 없지만 바뀔 수 있어 함께 받는다 */
+  applicant?: Applicant;
+}
+
+/** 지원자 정보. 백엔드는 `user` 로 내려주는데 문서에는 `applicant` 로 적혀 있다. */
+export function applicantOf(app: Application): Applicant | null {
+  return app.user ?? app.applicant ?? null;
+}
+
+export interface ApplyPayload {
+  message?: string;
+  portfolio?: string;
+}
+
+/**
+ * 세션과 공연은 경로만 다르고 스펙이 같다.
+ * 같은 코드를 두 번 쓰지 않도록 베이스 경로만 받아 API 묶음을 만든다.
+ */
+function createRecruitApi(base: string) {
+  const posts = `${base}/posts`;
+  const post = (id: string) => `${posts}/${id}`;
+  const applications = (id: string) => `${post(id)}/applications`;
+
+  return {
+    async list(query: RecruitQuery = {}, token?: string | null): Promise<Paged<RecruitPost>> {
+      const raw = await request<unknown>(withQuery(posts, { ...query }), { token });
+      return toPaged<RecruitPost>(raw);
+    },
+
+    detail(id: string, token?: string | null): Promise<RecruitPost> {
+      return request<RecruitPost>(post(id), { token });
+    },
+
+    create(token: string, payload: RecruitPayload): Promise<RecruitPost> {
+      return request<RecruitPost>(posts, { method: 'POST', body: payload, token });
+    },
+
+    update(token: string, id: string, payload: RecruitPayload): Promise<RecruitPost> {
+      return request<RecruitPost>(post(id), { method: 'PUT', body: payload, token });
+    },
+
+    remove(token: string, id: string): Promise<void> {
+      return request<void>(post(id), { method: 'DELETE', token });
+    },
+
+    /** 지원자 목록 — 작성자만 조회할 수 있어 그 외에는 403 이 온다. */
+    async applicants(token: string, id: string): Promise<Paged<Application>> {
+      const raw = await request<unknown>(applications(id), { token });
+      return toPaged<Application>(raw);
+    },
+
+    apply(token: string, id: string, payload: ApplyPayload = {}): Promise<Application> {
+      return request<Application>(applications(id), { method: 'POST', body: payload, token });
+    },
+
+    /** 수락/거절 — 작성자만 가능 */
+    decide(token: string, id: string, appId: string, status: 'ACCEPTED' | 'REJECTED'): Promise<Application> {
+      return request<Application>(`${applications(id)}/${appId}`, {
+        method: 'PATCH',
+        body: { status },
+        token,
+      });
+    },
+  };
+}
+
+export const sessionsApi = createRecruitApi('/api/sessions');
+export const concertsApi = createRecruitApi('/api/concerts');
 
 /* ── 업로드 ───────────────────────────────────────────────────── */
 
