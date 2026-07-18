@@ -1,22 +1,50 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-
-type Grade = 'S' | 'A' | 'B' | 'C';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CONDITIONS, GRADES, type Grade, type ItemCondition } from '@/lib/enums';
 
 export default function MarketFilterPage() {
-  const router = useRouter();
-  const [grades, setGrades] = useState<Set<Grade>>(new Set(['S', 'A']));
-  const [distance, setDistance] = useState('3km');
-  const [demoOnly, setDemoOnly] = useState(true);
-  const [directOnly, setDirectOnly] = useState(false);
-  const [beginnerPick, setBeginnerPick] = useState(false);
+  return (
+    <Suspense fallback={null}>
+      <FilterSheet />
+    </Suspense>
+  );
+}
 
-  const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value); else next.add(value);
-    return next;
+function FilterSheet() {
+  const router = useRouter();
+  const params = useSearchParams();
+
+  // 목록에서 넘어온 현재 조건을 그대로 이어받는다
+  const [grade, setGrade] = useState<Grade | null>((params.get('grade') as Grade) || null);
+  const [condition, setCondition] = useState<ItemCondition | null>(
+    (params.get('condition') as ItemCondition) || null,
+  );
+  const [minPrice, setMinPrice] = useState(params.get('minPrice') ?? '');
+  const [maxPrice, setMaxPrice] = useState(params.get('maxPrice') ?? '');
+
+  const reset = () => {
+    setGrade(null);
+    setCondition(null);
+    setMinPrice('');
+    setMaxPrice('');
+  };
+
+  const apply = () => {
+    // 목록이 이미 들고 있던 조건(카테고리·정렬·검색어)은 유지하고 필터만 덮어쓴다
+    const next = new URLSearchParams();
+    for (const key of ['category', 'sort', 'q'] as const) {
+      const v = params.get(key);
+      if (v) next.set(key, v);
+    }
+    if (grade) next.set('grade', grade);
+    if (condition) next.set('condition', condition);
+    if (minPrice.trim()) next.set('minPrice', String(Number(minPrice.replace(/[^\d]/g, '')) || 0));
+    if (maxPrice.trim()) next.set('maxPrice', String(Number(maxPrice.replace(/[^\d]/g, '')) || 0));
+
+    const qs = next.toString();
+    router.push(qs ? `/market?${qs}` : '/market');
   };
 
   return (
@@ -26,12 +54,15 @@ export default function MarketFilterPage() {
         className="sheet-backdrop"
         style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}
       />
-      <div className="sheet-surface" style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, top: 80,
-        background: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        padding: '12px 0 0', display: 'flex', flexDirection: 'column',
-        boxShadow: '0 -8px 24px rgba(0,0,0,0.08)',
-      }}>
+      <div
+        className="sheet-surface"
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, top: 80,
+          background: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          padding: '12px 0 0', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 24px rgba(0,0,0,0.08)',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 8px' }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--color-line-strong)' }} />
         </div>
@@ -39,13 +70,7 @@ export default function MarketFilterPage() {
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg-strong)' }}>필터</div>
           <button
             type="button"
-            onClick={() => {
-              setGrades(new Set());
-              setDistance('전체');
-              setDemoOnly(false);
-              setDirectOnly(false);
-              setBeginnerPick(false);
-            }}
+            onClick={reset}
             style={{ fontSize: 13, color: 'var(--fg-alternative)', border: 0, background: 'transparent', cursor: 'pointer' }}
           >
             초기화
@@ -53,14 +78,15 @@ export default function MarketFilterPage() {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '8px 16px 0' }}>
-          <FilterBlock label="등급">
+          {/* 서버가 grade 를 단일 값으로 받으므로 다중 선택을 쓰지 않는다 */}
+          <FilterBlock label="거래 등급">
             <div style={{ display: 'flex', gap: 6 }}>
-              {(['S', 'A', 'B', 'C'] as const).map((g) => (
+              {GRADES.map((g) => (
                 <button
                   type="button"
                   key={g}
-                  onClick={() => setGrades((s) => toggle(s, g))}
-                  className={grades.has(g) ? 'chip chip-active' : 'chip'}
+                  onClick={() => setGrade((cur) => (cur === g ? null : g))}
+                  className={grade === g ? 'chip chip-active' : 'chip'}
                   style={{ flex: 1, height: 36, justifyContent: 'center', fontSize: 13 }}
                 >
                   {g}급
@@ -69,45 +95,75 @@ export default function MarketFilterPage() {
             </div>
           </FilterBlock>
 
-          <FilterBlock label="가격대">
-            <div style={{ height: 40, position: 'relative', margin: '8px 4px' }}>
-              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 3, background: 'var(--color-line)', borderRadius: 2, transform: 'translateY(-50%)' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '15%', right: '40%', height: 3, background: 'var(--color-primary)', borderRadius: 2, transform: 'translateY(-50%)' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '15%', width: 18, height: 18, borderRadius: 9, background: '#fff', border: '2px solid var(--color-primary)', transform: 'translate(-50%,-50%)', boxShadow: '0 1px 4px rgba(0,0,0,0.16)' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '60%', width: 18, height: 18, borderRadius: 9, background: '#fff', border: '2px solid var(--color-primary)', transform: 'translate(-50%,-50%)', boxShadow: '0 1px 4px rgba(0,0,0,0.16)' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)' }}>
-              <span>10만원</span>
-              <span>50만원</span>
-            </div>
-          </FilterBlock>
-
-          <FilterBlock label="거리">
+          <FilterBlock label="상태">
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {['1km', '3km', '5km', '10km', '전체'].map((d) => (
+              {CONDITIONS.map((c) => (
                 <button
                   type="button"
-                  key={d}
-                  onClick={() => setDistance(d)}
-                  className={distance === d ? 'chip chip-active' : 'chip'}
+                  key={c.value}
+                  onClick={() => setCondition((cur) => (cur === c.value ? null : c.value))}
+                  className={condition === c.value ? 'chip chip-active' : 'chip'}
                   style={{ height: 32, fontSize: 12 }}
                 >
-                  {d}
+                  {c.label}
                 </button>
               ))}
             </div>
           </FilterBlock>
 
-          <FilterBlock label="추가 옵션">
-            <ToggleRow label="사운드 데모 있는 매물만" on={demoOnly} onChange={setDemoOnly} />
-            <ToggleRow label="직거래 가능" on={directOnly} onChange={setDirectOnly} />
-            <ToggleRow label="입문자 추천 가격대" on={beginnerPick} onChange={setBeginnerPick} />
+          <FilterBlock label="가격대">
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="number"
+                inputMode="numeric"
+                className="field"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder="최소"
+                style={{ flex: 1 }}
+              />
+              <span style={{ color: 'var(--fg-alternative)' }}>~</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                className="field"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="최대"
+                style={{ flex: 1 }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+              {[
+                { label: '10만원 이하', min: '', max: '100000' },
+                { label: '10~50만원', min: '100000', max: '500000' },
+                { label: '50~100만원', min: '500000', max: '1000000' },
+                { label: '100만원 이상', min: '1000000', max: '' },
+              ].map((p) => (
+                <button
+                  type="button"
+                  key={p.label}
+                  onClick={() => {
+                    setMinPrice(p.min);
+                    setMaxPrice(p.max);
+                  }}
+                  className={minPrice === p.min && maxPrice === p.max ? 'chip chip-active' : 'chip'}
+                  style={{ height: 30, fontSize: 12 }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </FilterBlock>
         </div>
 
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-line-soft)', display: 'flex', gap: 8 }}>
-          <button type="button" onClick={() => router.back()} className="btn btn-lg btn-outlined" style={{ flex: 1 }}>닫기</button>
-          <button type="button" onClick={() => router.back()} className="btn btn-lg btn-primary" style={{ flex: 1.5 }}>적용</button>
+          <button type="button" onClick={() => router.back()} className="btn btn-lg btn-outlined" style={{ flex: 1 }}>
+            닫기
+          </button>
+          <button type="button" onClick={apply} className="btn btn-lg btn-primary" style={{ flex: 1.5 }}>
+            적용
+          </button>
         </div>
       </div>
     </div>
@@ -120,24 +176,5 @@ function FilterBlock({ label, children }: { label: string; children: React.React
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', marginBottom: 10 }}>{label}</div>
       {children}
     </div>
-  );
-}
-
-function ToggleRow({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!on)}
-      style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', background: 'transparent', border: 0, cursor: 'pointer' }}
-    >
-      <span style={{ fontSize: 14, color: 'var(--fg-normal)' }}>{label}</span>
-      <div style={{
-        width: 44, height: 26, borderRadius: 13,
-        background: on ? 'var(--color-primary)' : 'var(--color-line)',
-        position: 'relative', transition: 'background .15s',
-      }}>
-        <div style={{ position: 'absolute', top: 2, left: on ? 20 : 2, width: 22, height: 22, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s' }} />
-      </div>
-    </button>
   );
 }

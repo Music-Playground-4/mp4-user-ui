@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { Suspense, useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { GradePill } from '@/components/ui/Pills';
 import { BottomTabBar } from '@/components/app/Nav';
@@ -16,13 +17,30 @@ import { formatPrice } from '@/lib/data';
 const PAGE_SIZE = 20;
 
 export default function MarketListPage() {
-  const { token } = useAuth();
+  // useSearchParams 는 Suspense 경계가 필요하다 (Next 15 프리렌더 규칙)
+  return (
+    <Suspense fallback={<LoadingState rows={4} />}>
+      <MarketList />
+    </Suspense>
+  );
+}
 
-  const [cat, setCat] = useState<ItemCategory | null>(null);
-  const [sort, setSort] = useState<ItemSort>('latest');
-  const [query, setQuery] = useState('');
+function MarketList() {
+  const { token } = useAuth();
+  const params = useSearchParams();
+
+  // 필터 시트에서 넘어온 조건 — URL 을 단일 출처로 삼는다
+  const grade = params.get('grade') ?? undefined;
+  const condition = params.get('condition') ?? undefined;
+  const minPrice = params.get('minPrice') ? Number(params.get('minPrice')) : undefined;
+  const maxPrice = params.get('maxPrice') ? Number(params.get('maxPrice')) : undefined;
+  const filterCount = [grade, condition, minPrice, maxPrice].filter((v) => v !== undefined).length;
+
+  const [cat, setCat] = useState<ItemCategory | null>((params.get('category') as ItemCategory) || null);
+  const [sort, setSort] = useState<ItemSort>((params.get('sort') as ItemSort) || 'latest');
+  const [query, setQuery] = useState(params.get('q') ?? '');
   // 입력 즉시 요청하면 타이핑마다 호출되므로 디바운스한 값으로만 조회한다
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState(params.get('q') ?? '');
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [sortOpen, setSortOpen] = useState(false);
 
@@ -34,10 +52,19 @@ export default function MarketListPage() {
   const list = useAsync<Paged<MarketItem>>(
     () =>
       marketApi.list(
-        { category: cat ?? undefined, sort, q: debouncedQuery || undefined, limit: PAGE_SIZE },
+        {
+          category: cat ?? undefined,
+          sort,
+          q: debouncedQuery || undefined,
+          grade,
+          condition,
+          minPrice,
+          maxPrice,
+          limit: PAGE_SIZE,
+        },
         token,
       ),
-    [cat, sort, debouncedQuery, token],
+    [cat, sort, debouncedQuery, grade, condition, minPrice, maxPrice, token],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -99,8 +126,20 @@ export default function MarketListPage() {
 
       <PullToRefresh onRefresh={handleRefresh}>
         <div style={{ padding: '12px 16px', display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid var(--color-line-soft)' }}>
-          <Link href="/market/filter" className="chip" style={{ height: 30, fontSize: 12, gap: 4 }}>
-            <Icon name="filter" size={12} strokeWidth={2} /> 필터
+          <Link
+            href={`/market/filter?${new URLSearchParams({
+              ...(cat ? { category: cat } : {}),
+              ...(sort !== 'latest' ? { sort } : {}),
+              ...(debouncedQuery ? { q: debouncedQuery } : {}),
+              ...(grade ? { grade } : {}),
+              ...(condition ? { condition } : {}),
+              ...(minPrice !== undefined ? { minPrice: String(minPrice) } : {}),
+              ...(maxPrice !== undefined ? { maxPrice: String(maxPrice) } : {}),
+            }).toString()}`}
+            className={filterCount > 0 ? 'chip chip-active' : 'chip'}
+            style={{ height: 30, fontSize: 12, gap: 4 }}
+          >
+            <Icon name="filter" size={12} strokeWidth={2} /> 필터{filterCount > 0 ? ` ${filterCount}` : ''}
           </Link>
           {!list.loading && !list.error && (
             <span style={{ fontSize: 12, color: 'var(--fg-alternative)' }}>{list.data?.total ?? 0}개</span>
@@ -177,8 +216,8 @@ export default function MarketListPage() {
 
         {!list.loading && !list.error && items.length === 0 && (
           <EmptyState
-            message={debouncedQuery || cat ? '조건에 맞는 장비가 없어요' : '아직 등록된 장비가 없어요'}
-            hint={debouncedQuery || cat ? '검색어나 카테고리를 바꿔 보세요.' : '첫 번째로 장비를 올려 보세요.'}
+            message={debouncedQuery || cat || filterCount ? '조건에 맞는 장비가 없어요' : '아직 등록된 장비가 없어요'}
+            hint={debouncedQuery || cat || filterCount ? '검색어나 필터를 바꿔 보세요.' : '첫 번째로 장비를 올려 보세요.'}
             action={<Link href="/market/sell" className="btn btn-md btn-primary">장비 등록하기</Link>}
           />
         )}

@@ -1,71 +1,164 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
-import { GEARS, CATEGORIES } from '@/lib/data';
+import { Spinner } from '@/components/ui/AuthForm';
+import { LoginRequired } from '@/components/ui/State';
+import { useAuth } from '@/lib/auth';
+import { errorText } from '@/lib/useApi';
+import { marketApi, uploadsApi } from '@/lib/api';
+import { CATEGORIES, CONDITIONS, GRADES, type ItemCategory, type ItemCondition, type Grade } from '@/lib/enums';
 
-const GRADES = ['S', 'A', 'B', 'C'] as const;
+const MAX_IMAGES = 10;
 
 export default function MarketSellPage() {
   const router = useRouter();
-  const [title, setTitle] = useState('Boss Katana 50 MkII');
-  const [cat, setCat] = useState('앰프');
-  const [grade, setGrade] = useState<typeof GRADES[number]>('A');
-  const [price, setPrice] = useState('220000');
-  const [region, setRegion] = useState('서울 마포구 합정동');
-  const [desc, setDesc] = useState('기능 정상, 외관 깨끗합니다. 리모트 미포함.\n약 1년 사용. 직거래 우선합니다.');
+  const { token, status } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const onSubmit = () => {
-    if (!title.trim() || !price.trim()) return;
-    alert('장비가 등록되었어요! (mock)');
-    router.push('/market');
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<ItemCategory>('STRINGS');
+  const [condition, setCondition] = useState<ItemCondition>('GOOD');
+  const [grade, setGrade] = useState<Grade>('A');
+  const [price, setPrice] = useState('');
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
+  const [location, setLocation] = useState('');
+  const [desc, setDesc] = useState('');
+
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const priceNum = Number(price.replace(/[^\d]/g, ''));
+  const canSubmit =
+    title.trim().length > 0 &&
+    desc.trim().length > 0 &&
+    priceNum > 0 &&
+    images.length > 0 &&
+    !submitting &&
+    !uploading;
+
+  const onPickFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files?.length || !token) return;
+      const room = MAX_IMAGES - images.length;
+      if (room <= 0) return;
+
+      setUploading(true);
+      setError(null);
+      try {
+        const picked = Array.from(files).slice(0, room);
+        const urls = await Promise.all(picked.map((f) => uploadsApi.upload(token, f, 'items')));
+        setImages((prev) => [...prev, ...urls]);
+      } catch (e) {
+        setError(errorText(e));
+      } finally {
+        setUploading(false);
+        if (fileRef.current) fileRef.current.value = '';
+      }
+    },
+    [token, images.length],
+  );
+
+  const onSubmit = async () => {
+    if (!token || !canSubmit) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const created = await marketApi.create(token, {
+        title: title.trim(),
+        description: desc.trim(),
+        price: priceNum,
+        category,
+        condition,
+        grade,
+        imageUrls: images,
+        ...(brand.trim() ? { brand: brand.trim() } : {}),
+        ...(model.trim() ? { model: model.trim() } : {}),
+        ...(location.trim() ? { location: location.trim() } : {}),
+      });
+      router.push(`/market/${created.id}`);
+    } catch (e) {
+      setError(errorText(e));
+      setSubmitting(false);
+    }
   };
+
+  if (status === 'guest') {
+    return (
+      <>
+        <TopBar title="장비 등록" />
+        <div className="scroll-region">
+          <LoginRequired message="로그인 후 장비를 등록할 수 있어요" />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
-      <TopBar
-        title="장비 등록"
-        right={
-          <button type="button" style={{ padding: '0 12px', height: 32, border: 0, background: 'transparent', color: 'var(--color-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            임시저장
-          </button>
-        }
-      />
+      <TopBar title="장비 등록" />
+
       <div className="scroll-region" style={{ padding: '16px 16px 20px' }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto' }}>
+        {/* 이미지 — 백엔드가 imageUrls 를 필수로 요구하므로 최소 1장 */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => onPickFiles(e.target.files)}
+          style={{ display: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8, overflowX: 'auto' }}>
           <button
             type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || images.length >= MAX_IMAGES}
             style={{
               width: 80, height: 80, border: '1.5px dashed var(--color-line-strong)', borderRadius: 8,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 4, color: 'var(--fg-alternative)', flexShrink: 0, background: '#fff', cursor: 'pointer',
+              gap: 4, color: 'var(--fg-alternative)', flexShrink: 0, background: '#fff',
+              cursor: uploading ? 'default' : 'pointer',
             }}
           >
-            <Icon name="plus" size={18} strokeWidth={1.8} />
-            <span style={{ fontSize: 11 }}>0/10</span>
+            {uploading ? <Spinner /> : <Icon name="plus" size={18} strokeWidth={1.8} />}
+            <span style={{ fontSize: 11 }}>{images.length}/{MAX_IMAGES}</span>
           </button>
-          <div style={{
-            width: 80, height: 80, borderRadius: 8,
-            background: `url(${GEARS[1].images?.[0]}) center/cover`,
-            position: 'relative', flexShrink: 0,
-          }}>
-            <div style={{ position: 'absolute', top: 4, left: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--color-primary)', color: '#fff', fontSize: 9, fontWeight: 700 }}>
-              대표
-            </div>
-          </div>
-          <div style={{ width: 80, height: 80, borderRadius: 8, background: `url(${GEARS[2].images?.[0]}) center/cover`, flexShrink: 0 }} />
-        </div>
 
-        <div style={{ padding: 14, border: '1px solid var(--color-primary)', borderRadius: 12, background: 'rgba(0,102,255,0.04)', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <Icon name="mic" size={16} color="var(--color-primary)" strokeWidth={2} />
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>사운드 데모 추가 (선택)</div>
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--fg-alternative)', lineHeight: 1.5 }}>
-            10~30초 직접 연주 녹음을 첨부하면 신뢰도가 올라가고, 매수자가 톤을 미리 들을 수 있어요.
-          </div>
+          {images.map((url, i) => (
+            <div
+              key={url}
+              style={{
+                width: 80, height: 80, borderRadius: 8, position: 'relative', flexShrink: 0,
+                background: `url(${url}) center/cover`,
+              }}
+            >
+              {i === 0 && (
+                <div style={{ position: 'absolute', top: 4, left: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--color-primary)', color: '#fff', fontSize: 9, fontWeight: 700 }}>
+                  대표
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
+                aria-label="사진 삭제"
+                style={{
+                  position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11,
+                  background: 'var(--fg-strong)', color: '#fff', border: '2px solid #fff',
+                  display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0,
+                }}
+              >
+                <Icon name="close" size={11} strokeWidth={2.6} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--fg-alternative)', marginBottom: 20 }}>
+          첫 번째 사진이 대표 이미지가 돼요. 최소 1장 필요합니다.
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -76,16 +169,33 @@ export default function MarketSellPage() {
           <Field label="카테고리">
             <select
               className="field"
-              value={cat}
-              onChange={(e) => setCat(e.target.value)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value as ItemCategory)}
               style={{ appearance: 'none', background: '#fff' }}
             >
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label} — {c.hint}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="상태">
+            <select
+              className="field"
+              value={condition}
+              onChange={(e) => setCondition(e.target.value as ItemCondition)}
+              style={{ appearance: 'none', background: '#fff' }}
+            >
+              {CONDITIONS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
             </select>
           </Field>
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-alternative)', marginBottom: 8 }}>등급</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-alternative)', marginBottom: 8 }}>거래 등급</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {GRADES.map((g) => (
                 <button
@@ -109,6 +219,7 @@ export default function MarketSellPage() {
           <Field label="가격">
             <input
               type="number"
+              inputMode="numeric"
               className="field"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
@@ -116,8 +227,21 @@ export default function MarketSellPage() {
             />
           </Field>
 
-          <Field label="거래 지역">
-            <input className="field" value={region} onChange={(e) => setRegion(e.target.value)} />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <Field label="브랜드 (선택)">
+                <input className="field" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Fender" />
+              </Field>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Field label="모델 (선택)">
+                <input className="field" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Stratocaster" />
+              </Field>
+            </div>
+          </div>
+
+          <Field label="거래 지역 (선택)">
+            <input className="field" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="서울 마포구" />
           </Field>
 
           <div>
@@ -127,23 +251,25 @@ export default function MarketSellPage() {
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               maxLength={1000}
-              style={{ minHeight: 96 }}
+              placeholder="구매 시기, 사용감, 포함되는 구성품 등을 적어 주세요."
+              style={{ minHeight: 96, lineHeight: 1.6 }}
             />
             <div style={{ fontSize: 11, color: 'var(--fg-alternative)', textAlign: 'right', marginTop: 4 }}>
               {desc.length} / 1000
             </div>
           </div>
         </div>
+
+        {error && (
+          <div role="alert" style={{ marginTop: 16, fontSize: 13, color: 'var(--color-negative)' }}>
+            {error}
+          </div>
+        )}
       </div>
+
       <div style={{ padding: '10px 16px', borderTop: '1px solid var(--color-line)', background: '#fff', flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!title.trim() || !price.trim()}
-          className="btn btn-lg btn-primary"
-          style={{ width: '100%' }}
-        >
-          등록하기
+        <button type="button" onClick={onSubmit} disabled={!canSubmit} className="btn btn-lg btn-primary" style={{ width: '100%' }}>
+          {submitting ? <Spinner /> : '등록하기'}
         </button>
       </div>
     </>
