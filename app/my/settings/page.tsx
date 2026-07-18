@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
+import { useAuth } from '@/lib/auth';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [toggles, setToggles] = useState({
     autoMatch: true,
     beginnerOnly: false,
@@ -51,7 +53,14 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="">
-          <Row label="로그아웃" danger onClick={() => router.push('/splash')} />
+          <Row
+            label="로그아웃"
+            danger
+            onClick={async () => {
+              await logout();
+              router.push('/splash');
+            }}
+          />
           <Row label="회원 탈퇴" danger onClick={() => confirm('정말 탈퇴하시겠어요?') && router.push('/splash')} />
         </Section>
       </div>

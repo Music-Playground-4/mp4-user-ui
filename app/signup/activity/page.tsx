@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
-import { StepBar } from '@/components/ui/AuthForm';
+import { StepBar, Spinner } from '@/components/ui/AuthForm';
+import { useAuth } from '@/lib/auth';
+import { errorText } from '@/lib/useApi';
+import { usersApi } from '@/lib/api';
 
 const OPTS = [
   { id: 'play', label: '합주·세션', sub: '정기·단기 멤버를 찾아요', count: '5,200명' },
@@ -15,7 +18,29 @@ const OPTS = [
 
 export default function SignupActivityPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [selected, setSelected] = useState<Set<string>>(new Set(['play', 'perform']));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // activityTypes 값은 화면 id 와 백엔드 값이 동일해 변환이 필요 없다
+  const onNext = async () => {
+    if (selected.size === 0) return;
+    if (!token) {
+      // 토큰이 없으면(로그인 만료 등) 저장을 건너뛰고 흐름은 유지한다
+      router.push('/profile-setup');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await usersApi.update(token, { activityTypes: Array.from(selected) });
+      router.push('/profile-setup');
+    } catch (e) {
+      setError(errorText(e));
+      setSaving(false);
+    }
+  };
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -73,15 +98,21 @@ export default function SignupActivityPage() {
           })}
         </div>
 
+        {error && (
+          <div role="alert" style={{ marginTop: 16, fontSize: 13, color: 'var(--color-negative)' }}>
+            {error}
+          </div>
+        )}
+
         <div style={{ flex: 1, minHeight: 24 }} />
         <button
           type="button"
-          onClick={() => router.push('/profile-setup')}
-          disabled={selected.size === 0}
+          onClick={onNext}
+          disabled={selected.size === 0 || saving}
           className="btn btn-lg btn-primary"
           style={{ width: '100%', marginTop: 24 }}
         >
-          다음 ({selected.size})
+          {saving ? <Spinner /> : `다음 (${selected.size})`}
         </button>
       </div>
     </>
