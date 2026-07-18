@@ -23,7 +23,23 @@ const ENDPOINTS = {
   userProfile: (id: string) => `/api/users/${id}`,
   userReviews: (id: string) => `/api/users/${id}/reviews`,
   userTrust: (id: string) => `/api/users/${id}/trust`,
+  items: '/api/marketplace/items',
+  item: (id: string) => `/api/marketplace/items/${id}`,
+  itemFavorite: (id: string) => `/api/marketplace/items/${id}/favorite`,
+  favorites: '/api/marketplace/favorites',
+  presignedUrl: '/api/uploads/presigned-url',
 } as const;
+
+/** 쿼리스트링 조립 — undefined/빈 문자열은 빼고, 값이 있는 것만 붙인다. */
+type QueryParams = Record<string, string | number | undefined | null>;
+
+function withQuery(path: string, params: QueryParams): string {
+  const qs = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join('&');
+  return qs ? `${path}?${qs}` : path;
+}
 
 /* ── 타입 ─────────────────────────────────────────────────────── */
 export interface AuthUser {
@@ -151,6 +167,171 @@ export const usersApi = {
 
   trust(id: string): Promise<TrustScore> {
     return request<TrustScore>(ENDPOINTS.userTrust(id));
+  },
+};
+
+/* ── 악기 장터 ────────────────────────────────────────────────── */
+
+/** 목록·상세에서 함께 쓰는 판매자 요약 */
+export interface SellerSummary {
+  id: string;
+  nickname: string | null;
+  avatar: string | null;
+  bio?: string | null;
+  createdAt?: string;
+}
+
+export interface ItemImage {
+  id: string;
+  url: string;
+  sortOrder: number;
+}
+
+export interface MarketItem {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  condition: string;
+  grade: string | null;
+  brand: string | null;
+  model: string | null;
+  status: string;
+  location: string | null;
+  viewCount: number;
+  createdAt: string;
+  seller: SellerSummary;
+  /** 목록은 문자열 배열, 상세는 객체 배열로 내려온다 — normalizeImages() 로 흡수 */
+  images: (string | ItemImage)[];
+  favCount: number;
+  isFavorited: boolean;
+  demoUrl?: string | null;
+  demoTitle?: string | null;
+  demoSec?: number | null;
+  /** 상세에만 포함 */
+  description?: string;
+  sellerId?: string;
+}
+
+export interface ItemListQuery {
+  page?: number;
+  limit?: number;
+  category?: string;
+  condition?: string;
+  grade?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  q?: string;
+  sort?: string;
+}
+
+export interface ItemPayload {
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition: string;
+  imageUrls: string[];
+  brand?: string;
+  model?: string;
+  grade?: string;
+  location?: string;
+  demoUrl?: string;
+  demoTitle?: string;
+  demoSec?: number;
+}
+
+/** 이미지 표현이 목록/상세에서 다르므로 URL 배열로 통일한다. */
+export function normalizeImages(images: (string | ItemImage)[] | undefined | null): string[] {
+  if (!images) return [];
+  return images
+    .map((img) => (typeof img === 'string' ? img : img?.url))
+    .filter((u): u is string => Boolean(u));
+}
+
+/**
+ * 목록 응답의 배열 키가 엔드포인트마다 다르다.
+ * 마켓은 `items`, 세션·공연은 `posts` 를 쓴다.
+ * 화면이 이 차이를 몰라도 되도록 여기서 흡수한다.
+ */
+function toPaged<T>(raw: unknown): Paged<T> {
+  const box = (raw ?? {}) as Record<string, unknown>;
+  const list = (box.items ?? box.posts ?? box.results ?? []) as T[];
+  return {
+    items: Array.isArray(list) ? list : [],
+    total: Number(box.total ?? 0),
+    page: Number(box.page ?? 1),
+    limit: Number(box.limit ?? list?.length ?? 0),
+    totalPages: Number(box.totalPages ?? 0),
+  };
+}
+
+export const marketApi = {
+  /** 목록. 비로그인도 조회 가능하지만 토큰이 있으면 isFavorited 가 채워진다. */
+  async list(query: ItemListQuery = {}, token?: string | null): Promise<Paged<MarketItem>> {
+    const raw = await request<unknown>(withQuery(ENDPOINTS.items, { ...query }), { token });
+    return toPaged<MarketItem>(raw);
+  },
+
+  /** 상세. 호출 시 서버에서 조회수가 증가한다. */
+  detail(id: string, token?: string | null): Promise<MarketItem> {
+    return request<MarketItem>(ENDPOINTS.item(id), { token });
+  },
+
+  create(token: string, payload: ItemPayload): Promise<MarketItem> {
+    return request<MarketItem>(ENDPOINTS.items, { method: 'POST', body: payload, token });
+  },
+
+  update(token: string, id: string, payload: ItemPayload): Promise<MarketItem> {
+    return request<MarketItem>(ENDPOINTS.item(id), { method: 'PUT', body: payload, token });
+  },
+
+  remove(token: string, id: string): Promise<void> {
+    return request<void>(ENDPOINTS.item(id), { method: 'DELETE', token });
+  },
+
+  /** 찜 토글. 서버가 멱등이라 같은 요청을 반복해도 안전하다. */
+  favorite(token: string, id: string, on: boolean): Promise<{ itemId: string; favorited: boolean }> {
+    return request(ENDPOINTS.itemFavorite(id), { method: on ? 'POST' : 'DELETE', token });
+  },
+
+  async myFavorites(token: string, query: { page?: number; limit?: number } = {}): Promise<Paged<MarketItem>> {
+    const raw = await request<unknown>(withQuery(ENDPOINTS.favorites, { ...query }), { token });
+    return toPaged<MarketItem>(raw);
+  },
+};
+
+/* ── 업로드 ───────────────────────────────────────────────────── */
+
+export interface PresignedUrl {
+  uploadUrl: string;
+  fileUrl: string;
+  key?: string;
+}
+
+export const uploadsApi = {
+  /** S3 업로드 URL 발급 → 클라이언트가 uploadUrl 로 직접 PUT 한다. */
+  presign(
+    token: string,
+    body: { filename: string; contentType: string; folder?: 'items' | 'avatars' | 'portfolios' },
+  ): Promise<PresignedUrl> {
+    return request<PresignedUrl>(ENDPOINTS.presignedUrl, { method: 'POST', body, token });
+  },
+
+  /** 발급받은 URL 로 파일을 올리고 공개 URL 을 돌려준다. */
+  async upload(token: string, file: File, folder: 'items' | 'avatars' = 'items'): Promise<string> {
+    const { uploadUrl, fileUrl } = await uploadsApi.presign(token, {
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream',
+      folder,
+    });
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    });
+    if (!res.ok) throw new ApiError(res.status, '이미지 업로드에 실패했어요');
+    return fileUrl;
   },
 };
 
