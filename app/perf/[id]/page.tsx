@@ -1,58 +1,91 @@
 'use client';
 
-import { useState, use } from 'react';
+import { use } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { TopBar } from '@/components/app/Nav';
-import { showById } from '@/lib/data';
+import { Avatar } from '@/components/ui/Avatar';
+import { LoadingState, ErrorState } from '@/components/ui/State';
+import { useAuth } from '@/lib/auth';
+import { useAsync } from '@/lib/useApi';
+import { concertsApi, displayName, type RecruitPost } from '@/lib/api';
 
 export default function PerfDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const s = showById(id);
-  const [fav, setFav] = useState(false);
+  const router = useRouter();
+  const { token, user } = useAuth();
 
-  if (!s) notFound();
+  const detail = useAsync<RecruitPost>(() => concertsApi.detail(id, token), [id, token]);
+
+  if (detail.loading) {
+    return (
+      <>
+        <TopBar title="공연" />
+        <div className="scroll-region"><LoadingState rows={3} /></div>
+      </>
+    );
+  }
+
+  if (detail.error || !detail.data) {
+    return (
+      <>
+        <TopBar title="공연" />
+        <div className="scroll-region">
+          <ErrorState
+            message={detail.status === 404 ? '삭제되었거나 없는 공연이에요' : (detail.error ?? '불러오지 못했어요')}
+            onRetry={detail.status === 404 ? undefined : detail.reload}
+          />
+        </div>
+      </>
+    );
+  }
+
+  const p = detail.data;
+  const author = p.author;
+  const name = displayName(author);
+  const isMine = user?.id === author?.id;
+  const closed = p.status !== 'OPEN';
+  const applied = p._count?.applications ?? 0;
+  const dateLabel = p.date ? new Date(p.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : null;
 
   return (
     <>
-      <TopBar
-        title="공연"
-        right={
-          <button type="button" onClick={() => setFav(!fav)} className="topbar-action heart-btn" data-on={fav} style={{ color: fav ? 'var(--color-negative)' : 'var(--fg-strong)' }}>
-            <span className="heart-icon" style={{ display: 'grid', placeItems: 'center' }}>
-              <Icon name={fav ? 'heartFill' : 'heart'} size={20} />
-            </span>
-          </button>
-        }
-      />
+      <TopBar title="공연" />
 
       <div className="scroll-region" style={{ paddingBottom: 80 }}>
-        <div style={{ height: 200, background: `url(${s.img}) center/cover`, position: 'relative' }}>
+        <div style={{ height: 200, background: 'linear-gradient(135deg, #2b2d42, #4a4e69)', position: 'relative' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.7), transparent 60%)' }} />
           <div style={{ position: 'absolute', bottom: 14, left: 16, right: 16, color: '#fff' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.85, marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              {s.date}
-            </div>
+            {dateLabel && (
+              <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.85, marginBottom: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                {dateLabel}
+              </div>
+            )}
             <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.02em' }}>
-              {s.title}
+              {p.title}
             </div>
           </div>
+          {closed && (
+            <div style={{ position: 'absolute', top: 12, right: 12, padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+              모집마감
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '14px 16px' }}>
-          <DetailRow label="장소" v={s.venue ?? s.host} />
-          <DetailRow label="공연시간" v="40분 · 무대당" />
-          <DetailRow label="페이" v={s.pay} />
-          <DetailRow label="모집" v={`${s.need.length}팀 (현재 1팀 확정)`} />
-          <DetailRow label="합주실" v="현장 사운드체크 60분 제공" />
+          <DetailRow label="장소" v={p.venue ?? p.location} />
+          <DetailRow label="지역" v={p.location} />
+          <DetailRow label="페이" v={p.pay ?? '협의'} />
+          <DetailRow label="모집 악기" v={p.instruments.join(' · ') || '-'} />
+          <DetailRow label="모집 인원" v={`${applied} / ${p.recruitCount}명 지원`} />
         </div>
 
-        {s.preferGenres && (
+        {p.genres.length > 0 && (
           <div style={{ padding: '4px 16px 0' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', marginBottom: 8 }}>선호 장르</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {s.preferGenres.map((g) => (
+              {p.genres.map((g) => (
                 <span key={g} className="chip" style={{ height: 28, fontSize: 12 }}>{g}</span>
               ))}
             </div>
@@ -60,53 +93,52 @@ export default function PerfDetailPage({ params }: { params: Promise<{ id: strin
         )}
 
         <div style={{ padding: '20px 16px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)' }}>확정 라인업</div>
-            <Link href={`/perf/${s.id}/lineup`} style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 600 }}>
-              전체 보기 →
-            </Link>
-          </div>
-          <div style={{ padding: 14, borderRadius: 10, border: '1px solid var(--color-line)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>OPEN ACT · The Volunteers</div>
-              <span className="badge badge-positive" style={{ fontSize: 10 }}>확정</span>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--fg-alternative)' }}>4인 풀밴드 · 30분 셋</div>
-          </div>
-          <Link href={`/perf/${s.id}/auto-team`} className="pressable" style={{
-            display: 'block', marginTop: 8, padding: 14, borderRadius: 10,
-            border: '1.5px dashed var(--color-line-strong)',
-            background: 'var(--neutral-99)',
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-alternative)', marginBottom: 4 }}>2번째 무대 · 모집중</div>
-            <div style={{ fontSize: 12, color: 'var(--fg-alternative)' }}>솔로 4명 자동 매칭 진행중 (3/4) →</div>
-          </Link>
-        </div>
-
-        <div style={{ padding: '20px 16px 0' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', marginBottom: 10 }}>주최자</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--cool-neutral-5)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
-              {s.host.slice(0, 2).toUpperCase()}
+          <button
+            type="button"
+            onClick={() => author && router.push(`/users/${author.id}`)}
+            className="pressable"
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, background: 'transparent', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left' }}
+            aria-label={`${name} 프로필 보기`}
+          >
+            <Avatar src={author?.avatar} name={name} size={44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>{name}</div>
+              <div style={{ fontSize: 11, color: 'var(--fg-alternative)' }}>{p.location}</div>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-strong)' }}>{s.host}</div>
-              <div style={{ fontSize: 11, color: 'var(--fg-alternative)' }}>주최 18회 · 평점 4.8</div>
-            </div>
-          </div>
+            <Icon name="chevR" size={16} color="var(--fg-assistive)" />
+          </button>
         </div>
 
-        {s.intro && (
+        {p.description && (
           <div style={{ padding: '20px 16px 0' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-strong)', marginBottom: 8 }}>소개</div>
-            <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--fg-normal)' }}>{s.intro}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--fg-normal)', whiteSpace: 'pre-wrap' }}>{p.description}</div>
           </div>
         )}
       </div>
 
-      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--color-line)', background: '#fff', display: 'flex', gap: 8, flexShrink: 0 }}>
-        <Link href={`/perf/${s.id}/apply`} className="btn btn-md btn-outlined" style={{ flex: 1, height: 44 }}>팀으로 지원</Link>
-        <Link href={`/perf/${s.id}/auto-team`} className="btn btn-md btn-primary" style={{ flex: 1.4, height: 44 }}>솔로 자동매칭</Link>
+      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--color-line)', background: '#fff', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        {isMine ? (
+          <Link href={`/perf/${p.id}/applicants`} className="btn btn-md btn-primary" style={{ flex: 1, height: 44 }}>
+            지원자 보기 ({applied})
+          </Link>
+        ) : (
+          <>
+            <Link href={`/perf/${p.id}/chat`} className="btn btn-md btn-outlined" style={{ flex: 1, height: 44 }}>
+              팀 채팅
+            </Link>
+            <button
+              type="button"
+              onClick={() => router.push(token ? `/perf/${p.id}/apply` : '/login')}
+              disabled={closed}
+              className="btn btn-md btn-primary"
+              style={{ flex: 1.5, height: 44 }}
+            >
+              {closed ? '모집 마감' : '지원하기'}
+            </button>
+          </>
+        )}
       </div>
     </>
   );
