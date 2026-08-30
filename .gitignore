@@ -48,3 +48,6 @@ next-env.d.ts
 
 # logs
 *.log
+
+# 검증용 빌드 산출물 (NEXT_DIST_DIR)
+/.next-verify/
