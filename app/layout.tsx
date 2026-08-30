@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { NEXT_SHOW, SLOGAN } from '@/lib/content';
 
 // 폰트는 Google Fonts CSS2 API 로 불러옵니다.
 // next/font 는 Gaegu·Gothic A1 의 korean 서브셋을 제공하지 않아(latin 전용) 한글이 폴백되므로,
@@ -7,14 +8,23 @@ import './globals.css';
 const FONT_CSS =
   'https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gothic+A1:wght@400;500;700;800;900&family=Archivo+Black&display=swap';
 
+const TITLE = `밴드할래? — ${SLOGAN.top} ${SLOGAN.bottom}`;
+
+const DESCRIPTION =
+  '합주만 하고 무대는 아직인 팀, 멤버는 모였는데 시작을 못 한 팀. 그 첫 무대를 우리가 처음부터 끝까지 같이 만듭니다.';
+
+// 공연 정보가 바뀌면 공유 카드 문구도 함께 따라오도록 content.ts 에서 만듭니다.
+const OG_DESCRIPTION = NEXT_SHOW
+  ? `${NEXT_SHOW.date} ${NEXT_SHOW.time} · ${NEXT_SHOW.venue}. 함께 설 팀을 찾습니다.`
+  : DESCRIPTION;
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
-  title: '밴드할래? — 무대만 서면 돼. 나머진 우리가.',
-  description:
-    '합주만 하고 무대는 아직인 팀, 멤버는 모였는데 시작을 못 한 팀. 그 첫 무대를 우리가 처음부터 끝까지 같이 만듭니다.',
+  title: TITLE,
+  description: DESCRIPTION,
   openGraph: {
-    title: '밴드할래? — 무대만 서면 돼. 나머진 우리가.',
-    description: '2026년 10월 31일 토요일 밤, 우리의 첫 공연. 함께 설 팀을 찾습니다.',
+    title: TITLE,
+    description: OG_DESCRIPTION,
     type: 'website',
     locale: 'ko_KR',
     images: [{ url: '/brand/bandhallae-post-1080x1080.png', width: 1080, height: 1080 }],
