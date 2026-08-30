@@ -38,9 +38,10 @@ export const TICKET_STATE_CHIPS: { value: TicketState; label: string }[] = [
 
 /**
  * 디자인 시안에 있던 "버튼 상태 (개발 참고)" 칩을 노출할지 여부.
- * 실제 배포 시에는 false 로 바꿔 숨깁니다.
+ * 실제 사용자에게 보이는 페이지이므로 꺼둡니다.
+ * 상태를 바꾸려면 이 칩이 아니라 각 공연의 ticketState 값을 수정하세요.
  */
-export const SHOW_TICKET_STATE_SWITCHER = true;
+export const SHOW_TICKET_STATE_SWITCHER = false;
 
 /* ── 라인업 ──────────────────────────────────────────────────── */
 
@@ -149,9 +150,12 @@ export const NEXT_SHOW: Show | undefined = UPCOMING_SHOWS[0];
 /* ── 브랜드 · 공통 ───────────────────────────────────────────── */
 export const SLOGAN = { top: '무대만 서면 돼.', bottom: '나머진 우리가.' } as const;
 
+const INSTAGRAM_HANDLE = '@bandgoofficial';
+
 export const LINKS = {
-  instagram: 'https://instagram.com',
-  instagramHandle: '@bandgoofficial',
+  instagramHandle: INSTAGRAM_HANDLE,
+  // 핸들 한 곳만 고치면 헤더·푸터 링크가 함께 따라옵니다.
+  instagram: `https://instagram.com/${INSTAGRAM_HANDLE.replace(/^@/, '')}`,
   email: 'tt997768@gmail.com',
 } as const;
 
