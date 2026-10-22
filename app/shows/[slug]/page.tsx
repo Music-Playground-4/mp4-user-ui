@@ -6,6 +6,7 @@ import { ShowHero } from '@/components/site/ShowHero';
 import { ShowInfo } from '@/components/site/ShowInfo';
 import { Lineup } from '@/components/site/Lineup';
 import { PosterSection } from '@/components/site/PosterSection';
+import { RefundPolicy } from '@/components/site/RefundPolicy';
 import { Join } from '@/components/site/Join';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SHOWS, getShow } from '@/lib/content';
@@ -43,6 +44,7 @@ export default async function ShowPage({ params }: PageProps) {
         <ShowInfo show={show} />
         <Lineup show={show} />
         <PosterSection show={show} />
+        <RefundPolicy show={show} />
         <Join defaultShowSlug={show.slug} />
       </main>
       <SiteFooter />
