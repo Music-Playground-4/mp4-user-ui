@@ -95,6 +95,26 @@ export interface Show {
    * 이미지는 public/posters/ 에 넣고 '/posters/파일명.png' 로 지정하세요.
    */
   poster?: Poster;
+  /** 참가팀 대상 참가비 환불 규정. 날짜가 공연마다 달라서 공연 단위로 둡니다. */
+  refundPolicy?: RefundPolicy;
+}
+
+/* ── 참가비 환불 규정 ────────────────────────────────────────── */
+export interface RefundTier {
+  /** '~9/30 취소' 같은 기간 */
+  period: string;
+  /** '전액 환불' / '50% 환불' / '환불 불가' */
+  refund: string;
+  /** 표 안에서 강조 단계. full 은 먹색, partial 은 오렌지, none 은 흐리게. */
+  tone: 'full' | 'partial' | 'none';
+}
+
+export interface RefundPolicy {
+  tiers: RefundTier[];
+  /** 참가팀 취소가 아닌 경우(주최·공연장 사정) */
+  exceptions: { case: string; rule: string }[];
+  /** 차등을 둔 이유 */
+  reason: string;
 }
 
 export interface Poster {
@@ -134,6 +154,20 @@ export const SHOWS: Show[] = [
     lineupNote: '한 자리가 아직 비어 있어요. 참여 문의는 아래에서 →',
     // 포스터가 나오면 public/posters/ 에 넣고 아래 주석을 풀어주세요.
     // poster: { src: '/posters/vol-01.png', alt: '밴드할래? VOL.01 포스터', width: 1414, height: 2000 },
+    // 참가팀 공지(2026.08)의 환불 규정 그대로입니다.
+    refundPolicy: {
+      tiers: [
+        { period: '~ 9/30 취소', refund: '전액 환불', tone: 'full' },
+        { period: '10/1 ~ 10/16 취소', refund: '50% 환불', tone: 'partial' },
+        { period: '10/17 이후 취소 · 당일 불참', refund: '환불 불가', tone: 'none' },
+      ],
+      exceptions: [
+        { case: '주최 측 사정으로 공연이 무산될 경우', rule: '전액 환불' },
+        { case: '공연장 사정이 생길 경우', rule: '연기를 우선 진행하고, 연기가 어려우면 전액 환불' },
+      ],
+      reason:
+        '늦게 취소되면 대체 팀 섭외가 어렵고 대관·음향비가 이미 집행된 상태라 부득이하게 차등을 두었습니다. 양해 부탁드립니다!',
+    },
   },
 ];
 
@@ -247,7 +281,8 @@ export const FAQS: FaqItem[] = [
   },
   {
     q: '환불은 어떻게 되나요?',
-    a: '공연 3주 전까지는 전액, 2주 전까지는 50% 환불됩니다. 그 이후에는 대관과 음향 계약이 확정되어 환불이 어렵습니다.',
+    // 공연마다 날짜가 달라서 구체적인 규정은 각 공연의 refundPolicy 를 따릅니다.
+    a: '공연별 상세 페이지의 환불 규정을 따릅니다. 취소 시점이 이를수록 많이 환불되고, 주최 측 사정으로 공연이 무산되면 전액 환불됩니다.',
   },
   {
     q: '백라인은 뭐가 제공되나요?',
