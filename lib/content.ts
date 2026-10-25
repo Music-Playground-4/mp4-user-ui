@@ -63,6 +63,26 @@ export interface Band {
   instagram?: string;
   youtube?: string;
   appleMusic?: string;
+  /** 팀 사진이나 로고. public/bands/ 에 넣고 '/bands/파일명' 으로 지정합니다. */
+  photo?: BandPhoto;
+  /** 예상 셋리스트. 확정 전이라 화면에는 '예정'으로 표시됩니다. */
+  setlist?: SetlistSong[];
+}
+
+export interface BandPhoto {
+  src: string;
+  alt: string;
+  /**
+   * photo 는 칸을 꽉 채우도록 잘라서, logo 는 글자가 잘리지 않게 통째로 보여줍니다.
+   * 카드 사진 칸은 가로로 넓어서 정사각 로고를 꽉 채우면 아래쪽 팀명이 잘립니다.
+   */
+  kind: 'photo' | 'logo';
+}
+
+export interface SetlistSong {
+  title: string;
+  /** 커버곡일 때만 원곡 아티스트 */
+  artist?: string;
 }
 
 /* ── 공연 ────────────────────────────────────────────────────── */
@@ -152,16 +172,42 @@ export const SHOWS: Show[] = [
         // 점 양쪽 띄어쓰기까지 팀이 요청한 표기 그대로입니다.
         name: '광 . 유랑단',
         members: ['보컬 · 기타', '기타', '베이스', '드럼'],
+        photo: { src: '/bands/gwang-yurangdan-logo.webp', alt: '광 . 유랑단 로고', kind: 'logo' },
+        setlist: [
+          { title: '시작이반' },
+          { title: '일곱번 넘어져도' },
+          { title: '단단한 태세' },
+          { title: '저녁 도깨비' },
+          { title: '집으로 가는 길' },
+          { title: '이 노래가 너에게 닿기를' },
+        ],
       },
       {
         no: 'TEAM 02',
         name: '너트피킹',
         members: ['보컬 · 기타', '기타', '베이스', '드럼', '키보드'],
+        setlist: [
+          { title: '범람', artist: '라쿠나' },
+          { title: '맨드라미', artist: '라쿠나' },
+          { title: '야광', artist: '쏜애플' },
+          { title: '토마토살인사건', artist: '데카당' },
+          { title: '도망쳐', artist: '밴드기린' },
+          { title: 'Hello,world!', artist: 'BUMP OF CHICKEN' },
+        ],
       },
       {
         no: 'TEAM 03',
         name: '박씨물고온제비',
         members: ['보컬', '기타 ×3', '베이스', '키보드', '드럼', '바이올린', '색소폰'],
+        setlist: [
+          { title: '패배자에게 앵콜은 필요 없어' },
+          { title: '봄팔이' },
+          { title: '마타사부로' },
+          { title: '퍼레이드' },
+          { title: '시쓰기와 커피' },
+          { title: '도작' },
+          { title: '물떼새' },
+        ],
       },
       { no: 'TEAM 04', slot: 'open' },
     ],

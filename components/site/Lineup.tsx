@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Glyph } from './BrandDefs';
 import type { Band, Show } from '@/lib/content';
 
@@ -31,6 +32,26 @@ function BandLinks({ band }: { band: Band }) {
   );
 }
 
+function Setlist({ songs }: { songs: NonNullable<Band['setlist']> }) {
+  return (
+    <div className="band-setlist">
+      <div className="band-setlist-head">
+        <span className="band-setlist-label">SET LIST</span>
+        {/* 팀들이 아직 곡을 바꾸고 있어서 확정된 것처럼 보이지 않게 합니다. */}
+        <span className="band-setlist-tag">예정</span>
+      </div>
+      <ol className="band-setlist-list">
+        {songs.map((song) => (
+          <li key={song.title} className="band-setlist-song">
+            {song.title}
+            {song.artist && <span className="band-setlist-artist"> · {song.artist}</span>}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function BandCard({ band }: { band: Band }) {
   // 이름이 있으면 공개된 팀, 없으면 slot 에 따라 두 종류의 자리 카드가 됩니다.
   const revealed = Boolean(band.name);
@@ -40,14 +61,26 @@ function BandCard({ band }: { band: Band }) {
 
   return (
     <article className={cardClass}>
-      <div className="band-photo">
-        <svg width="150" height="150" viewBox="0 0 100 100" className="band-photo-ghost" aria-hidden="true">
-          <g filter="url(#rgh)">
-            <use href="#ghost" />
-          </g>
-        </svg>
+      <div className={band.photo ? `band-photo band-photo--${band.photo.kind}` : 'band-photo'}>
+        {band.photo ? (
+          <Image
+            src={band.photo.src}
+            alt={band.photo.alt}
+            fill
+            className="band-photo-img"
+            sizes="(min-width: 1024px) 560px, 100vw"
+          />
+        ) : (
+          <svg width="150" height="150" viewBox="0 0 100 100" className="band-photo-ghost" aria-hidden="true">
+            <g filter="url(#rgh)">
+              <use href="#ghost" />
+            </g>
+          </svg>
+        )}
         <div className="band-no">{band.no}</div>
-        <div className="band-photo-hint">{revealed ? '팀 사진 영역' : open ? '모집 중' : '공개 예정'}</div>
+        {!band.photo && (
+          <div className="band-photo-hint">{revealed ? '팀 사진 영역' : open ? '모집 중' : '공개 예정'}</div>
+        )}
       </div>
 
       <div className="band-body">
@@ -67,6 +100,7 @@ function BandCard({ band }: { band: Band }) {
                 ))}
               </div>
             )}
+            {band.setlist && band.setlist.length > 0 && <Setlist songs={band.setlist} />}
           </>
         ) : open ? (
           <>

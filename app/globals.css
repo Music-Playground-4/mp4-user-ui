@@ -681,6 +681,21 @@ img {
 .band-photo-ghost {
   opacity: 0.16;
 }
+/* 팀이 보내준 사진·로고 */
+.band-photo-img {
+  object-fit: cover;
+}
+/* 로고는 팀명이 잘리지 않게 통째로 보여주고, 남는 좌우는 먹색으로 */
+.band-photo--logo {
+  background: var(--ink);
+}
+.band-photo--logo .band-photo-img {
+  object-fit: contain;
+}
+/* 이미지 위에 번호 스탬프가 올라가도록 */
+.band-photo .band-no {
+  z-index: 1;
+}
 .band-no {
   position: absolute;
   left: 14px;
@@ -799,6 +814,50 @@ img {
   color: var(--muted-2);
   background: var(--cream);
   padding: 6px 10px;
+}
+/* 예상 셋리스트 */
+.band-setlist {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--cream-alt);
+}
+.band-setlist-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.band-setlist-label {
+  font-family: var(--font-stamp), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--muted-3);
+}
+.band-setlist-tag {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--orange-deep);
+}
+.band-setlist-list {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.band-setlist-song {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.band-setlist-song::marker {
+  font-family: var(--font-stamp), sans-serif;
+  font-size: 12px;
+  color: var(--muted-3);
+}
+.band-setlist-artist {
+  font-weight: 600;
+  color: var(--muted-3);
 }
 .lineup-note {
   margin-top: 16px;
