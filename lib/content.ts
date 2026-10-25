@@ -141,8 +141,8 @@ export const SHOWS: Show[] = [
     venueNote: '서울 마포구',
     venueMapUrl: 'https://naver.me/x4lvTAV3',
     ticketState: 'soon',
-    ticketPrice: '예매가 미정',
-    ticketPriceNote: '정해지면 가장 먼저 공지할게요',
+    ticketPrice: '10,000원',
+    ticketPriceNote: '예매 · 현장 동일',
     status: 'upcoming',
     // 세 팀 확정(2026.10). 네 번째 팀은 참가 취소로 다시 찾는 중입니다.
     // 공연 순서가 아니라 확정 순서이고, 멤버 칩은 실명 대신 세션만 표기합니다.
