@@ -117,6 +117,34 @@ export interface Show {
   poster?: Poster;
   /** 참가팀 대상 참가비 환불 규정. 날짜가 공연마다 달라서 공연 단위로 둡니다. */
   refundPolicy?: RefundPolicy;
+  /** 관객 온라인 예매. 있으면 /shows/<slug>/tickets 예매 페이지가 열립니다. */
+  ticketing?: ShowTicketing;
+}
+
+/* ── 관객 예매 ───────────────────────────────────────────────── */
+
+/**
+ * 결제 연동 없이 계좌이체로 받습니다. 입금 확인은 운영진이 예매 시트에서 직접 처리합니다.
+ * 계좌가 바뀌면 이 한 곳만 고치면 예매·티켓 화면이 함께 따라옵니다.
+ */
+export const TICKET_ACCOUNT = {
+  bank: '토스뱅크',
+  number: '1002-7460-2611',
+  holder: '밴드할래',
+} as const;
+
+export interface ShowTicketing {
+  /** 1매 가격(원) */
+  price: number;
+  /** 한 번에 신청할 수 있는 최대 매수 */
+  maxPerOrder: number;
+  /** 온라인 예매 마감 시각(KST, ISO). 지나면 현장 구매만 받습니다. */
+  closesAt: string;
+  closesLabel: string;
+  /** 입금 기한 안내 */
+  depositNote: string;
+  /** 관객 환불 규정 (참가팀 참가비 환불 규정과 별개) */
+  refund: string[];
 }
 
 /* ── 참가비 환불 규정 ────────────────────────────────────────── */
@@ -160,7 +188,8 @@ export const SHOWS: Show[] = [
     venue: '홍대 백라인스테이지',
     venueNote: '서울 마포구',
     venueMapUrl: 'https://naver.me/x4lvTAV3',
-    ticketState: 'soon',
+    // 예매 시트(TICKETS_SCRIPT_URL)가 연결되지 않은 배포에서는 자동으로 '오픈 전'으로 보입니다.
+    ticketState: 'presale',
     ticketPrice: '10,000원',
     ticketPriceNote: '예매 · 현장 동일',
     status: 'upcoming',
@@ -214,6 +243,19 @@ export const SHOWS: Show[] = [
     lineupNote: '한 자리가 아직 비어 있어요. 참여 문의는 아래에서 →',
     // 포스터가 나오면 public/posters/ 에 넣고 아래 주석을 풀어주세요.
     // poster: { src: '/posters/vol-01.png', alt: '밴드할래? VOL.01 포스터', width: 1414, height: 2000 },
+    ticketing: {
+      price: 10000,
+      maxPerOrder: 6,
+      closesAt: '2026-11-13T23:59:59+09:00',
+      closesLabel: '11월 13일(금) 자정',
+      depositNote: '신청 후 24시간 안에 입금해 주세요. 기한이 지나면 신청이 취소될 수 있어요.',
+      // 관객 환불 규정은 운영진 확정 전 기본안입니다. 바뀌면 여기만 고치세요.
+      refund: [
+        '공연 3일 전(11/11)까지 취소하면 전액 환불해 드려요.',
+        '11/12부터는 환불이 어려워요. 대신 다른 분께 양도는 가능해요.',
+        '주최 측 사정으로 공연이 취소되면 전액 환불해 드려요.',
+      ],
+    },
     // 참가팀 공지(2026.08)의 환불 규정 그대로입니다.
     refundPolicy: {
       tiers: [

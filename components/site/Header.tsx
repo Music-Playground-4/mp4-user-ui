@@ -2,7 +2,12 @@ import Link from 'next/link';
 import { Glyph } from './BrandDefs';
 import { LINKS } from '@/lib/content';
 
-export function Header() {
+interface HeaderProps {
+  /** 오른쪽 버튼. 기본은 같은 페이지의 참여 문의(#apply)로 내려가는 '문의하기'. */
+  cta?: { href: string; label: string };
+}
+
+export function Header({ cta = { href: '#apply', label: '문의하기' } }: HeaderProps) {
   return (
     <header className="header">
       <Link href="/" className="header-brand" aria-label="밴드할래? 홈">
@@ -21,8 +26,8 @@ export function Header() {
         >
           <Glyph id="ic-insta" size={21} />
         </a>
-        <a href="#apply" className="header-cta">
-          문의하기
+        <a href={cta.href} className="header-cta">
+          {cta.label}
         </a>
       </div>
     </header>

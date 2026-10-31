@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { NEXT_SHOW, SLOGAN } from '@/lib/content';
+import { effectiveTicketState } from '@/lib/ticketStore';
 
 /** 메인 페이지 히어로. 다가오는 공연이 있으면 날짜 스탬프로 함께 알립니다. */
 export function Hero() {
+  // 예매가 열려 있으면 관객이 바로 예매로 갈 수 있게 첫 버튼을 바꿉니다.
+  const ticketShow = NEXT_SHOW?.ticketing && effectiveTicketState(NEXT_SHOW) === 'presale' ? NEXT_SHOW : undefined;
   return (
     <section className="hero">
       {/* 배경 장식 — 로고 실루엣을 크게 눕혀 깔아둡니다. */}
@@ -32,9 +35,15 @@ export function Hero() {
         </p>
 
         <div className="cta-row">
-          <Link href="#shows" className="cta cta--ink">
-            공연 일정 보기
-          </Link>
+          {ticketShow ? (
+            <Link href={`/shows/${ticketShow.slug}/tickets`} className="cta cta--ink">
+              티켓 예매하기
+            </Link>
+          ) : (
+            <Link href="#shows" className="cta cta--ink">
+              공연 일정 보기
+            </Link>
+          )}
           <Link href="#apply" className="cta cta--orange">
             밴드 참여 문의
           </Link>

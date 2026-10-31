@@ -10,6 +10,7 @@ import { RefundPolicy } from '@/components/site/RefundPolicy';
 import { Join } from '@/components/site/Join';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SHOWS, getShow } from '@/lib/content';
+import { effectiveTicketState } from '@/lib/ticketStore';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -41,7 +42,7 @@ export default async function ShowPage({ params }: PageProps) {
       <Header />
       <main>
         <ShowHero show={show} />
-        <ShowInfo show={show} />
+        <ShowInfo show={show} ticketState={effectiveTicketState(show)} />
         <Lineup show={show} />
         <PosterSection show={show} />
         <RefundPolicy show={show} />

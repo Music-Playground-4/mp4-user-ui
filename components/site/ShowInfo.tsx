@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   TICKET_LABEL,
   TICKET_NOTE,
@@ -10,9 +11,15 @@ import {
   type TicketState,
 } from '@/lib/content';
 
-export function ShowInfo({ show }: { show: Show }) {
-  // 기본값은 공연 데이터의 ticketState. 개발 참고용 칩으로만 바뀝니다.
-  const [ticket, setTicket] = useState<TicketState>(show.ticketState);
+interface Props {
+  show: Show;
+  /** 실제 판매 상태. 예매 저장소가 연결되지 않았으면 서버가 'soon' 으로 낮춰서 넘겨줍니다. */
+  ticketState: TicketState;
+}
+
+export function ShowInfo({ show, ticketState }: Props) {
+  // 개발 참고용 칩으로만 바뀝니다.
+  const [ticket, setTicket] = useState<TicketState>(ticketState);
   const note = TICKET_NOTE[ticket];
 
   return (
@@ -58,10 +65,23 @@ export function ShowInfo({ show }: { show: Show }) {
 
         <div>
           <div className="ticket-slot">
-            {/* 예매처가 정해지면 presale 상태에서만 <a href={예매URL}> 로 바꾸면 됩니다. */}
-            <button type="button" className={`ticket-btn ticket-btn--${ticket}`} disabled={ticket !== 'presale'}>
-              {TICKET_LABEL[ticket]}
-            </button>
+            {ticket === 'presale' && show.ticketing ? (
+              <>
+                <Link href={`/shows/${show.slug}/tickets`} className="ticket-btn ticket-btn--presale">
+                  {TICKET_LABEL[ticket]}
+                </Link>
+                <div className="ticket-note">
+                  {show.ticketing.closesLabel}까지 온라인 예매 ·{' '}
+                  <Link href="/ticket" className="ticket-note-link">
+                    예매 조회
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <button type="button" className={`ticket-btn ticket-btn--${ticket}`} disabled>
+                {TICKET_LABEL[ticket]}
+              </button>
+            )}
             {note && <div className="ticket-note">{note}</div>}
           </div>
 

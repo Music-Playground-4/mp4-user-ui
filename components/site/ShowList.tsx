@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { UPCOMING_SHOWS, PAST_SHOWS, TICKET_BADGE, type Show } from '@/lib/content';
+import { effectiveTicketState } from '@/lib/ticketStore';
 
 function ShowCard({ show }: { show: Show }) {
+  const state = effectiveTicketState(show);
   return (
     <Link href={`/shows/${show.slug}`} className="show-card">
       <div className="show-card-top">
         <div className="date-stamp">{show.badge}</div>
         <div className="show-card-vol">VOL.{show.volume}</div>
-        <span className={`show-badge show-badge--${show.ticketState}`}>{TICKET_BADGE[show.ticketState]}</span>
+        <span className={`show-badge show-badge--${state}`}>{TICKET_BADGE[state]}</span>
       </div>
 
       <div className="show-card-title">{show.title}</div>
