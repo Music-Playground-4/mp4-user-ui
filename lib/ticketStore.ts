@@ -19,7 +19,8 @@ import { formatPhone } from '@/lib/tickets';
 import type { Show, TicketState } from '@/lib/content';
 
 /** Apps Script 웹 앱 주소(…/exec). 환경변수가 있으면 그쪽이 우선합니다. */
-const DEFAULT_SCRIPT_URL = '';
+const DEFAULT_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbwXL70hjSzNxFM33vvTTgxkr7-VnamGcof_ojKeHN6-GUB6rRlsbsBGaCBIkbZhFVx_/exec';
 const SCRIPT_URL = process.env.TICKETS_SCRIPT_URL || DEFAULT_SCRIPT_URL;
 
 const USE_SCRIPT = SCRIPT_URL.length > 0;
