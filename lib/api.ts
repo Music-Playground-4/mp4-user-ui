@@ -140,8 +140,8 @@ export function lookupTickets(name: string, phone: string): Promise<LookupResult
 }
 
 /* ── 운영진 ──────────────────────────────────────────────────── */
-export function adminSignIn(password: string): Promise<null> {
-  return request('/api/admin/session', { method: 'POST', body: { password } });
+export function adminSignIn(id: string, password: string): Promise<null> {
+  return request('/api/admin/session', { method: 'POST', body: { id, password } });
 }
 
 export function adminSignOut(): Promise<null> {

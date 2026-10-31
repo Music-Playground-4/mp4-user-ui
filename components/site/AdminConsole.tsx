@@ -20,6 +20,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 const REFRESH_MS = 30_000;
 
 function SignIn({ onDone }: { onDone: () => void }) {
+  const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -29,7 +30,7 @@ function SignIn({ onDone }: { onDone: () => void }) {
     setSending(true);
     setError(null);
     try {
-      await adminSignIn(password);
+      await adminSignIn(id, password);
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '잠시 후 다시 시도해 주세요.');
@@ -42,6 +43,19 @@ function SignIn({ onDone }: { onDone: () => void }) {
     <div className="apply-box adm-signin">
       <form className="apply-form" onSubmit={onSubmit}>
         <div className="apply-title">운영진 로그인</div>
+        <div className="field">
+          <label className="field-label" htmlFor="adm-id">
+            아이디
+          </label>
+          <input
+            id="adm-id"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+          />
+        </div>
         <div className="field">
           <label className="field-label" htmlFor="adm-pw">
             비밀번호

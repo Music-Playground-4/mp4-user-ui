@@ -1,25 +1,36 @@
 /**
  * 밴드할래? 관객 예매 시트 — Google Apps Script 웹 앱
  * ─────────────────────────────────────────────────────────────
- * 사이트 서버(lib/ticketStore.ts)만 이 웹 앱을 부릅니다. 브라우저는 직접 부르지 않습니다.
+ * 사이트 서버(lib/ticketStore.ts)가 이 웹 앱을 부릅니다.
+ *
+ * 저장소가 공개라서 운영진 아이디·비밀번호는 저장소가 아니라 이 스크립트 안에만 둡니다.
+ * (붙여넣은 뒤 ADMIN_ID / ADMIN_PASSWORD 를 바꾸세요.)
  *
  * 설치
- *  1. 구글 시트를 새로 만들고  확장 프로그램 → Apps Script
- *  2. 이 파일 내용을 통째로 붙여넣고 SECRET 을 긴 임의 문자열로 바꾼 뒤 저장
- *  3. 배포 → 새 배포 → 유형: 웹 앱
- *     - 다음 사용자 인증 정보로 실행: 나
- *     - 액세스 권한이 있는 사용자: 모든 사용자
- *  4. 나온 웹 앱 URL(…/exec)을 Vercel 환경변수 TICKETS_SCRIPT_URL 에,
- *     SECRET 값을 TICKETS_SCRIPT_SECRET 에 넣고 Redeploy
+ *  1. 구글 시트에서  확장 프로그램 → Apps Script
+ *  2. 이 파일 내용을 통째로 붙여넣고 저장
+ *  3. 배포 → 새 배포 → 유형: 웹 앱 / 실행: 나 / 액세스: 모든 사용자 → 배포
+ *  4. 나온 웹 앱 URL(…/exec)을 lib/ticketStore.ts 의 SCRIPT_URL 에 넣기
  *
- * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정 → 버전: 새 버전 으로 다시 배포해야 반영됩니다.
+ * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 으로 다시 배포해야 반영됩니다.
+ *
+ * 누가 무엇을 할 수 있나
+ *  - 예매 신청(create): 누구나 (사이트 예매 폼과 같음)
+ *  - 티켓 보기(get): 예매번호 + 토큰을 아는 사람(= 티켓 링크를 가진 사람)
+ *  - 예매 조회(lookup): 이름 + 연락처가 모두 맞는 사람
+ *  - 목록·상태 변경(list/update): 운영진 로그인(login)으로 받은 세션
  *
  * 시트의 '상태' 칸은 입금대기 / 입금확인 / 입장완료 / 취소 중 하나입니다.
  * 운영진이 시트에서 직접 바꿔도 사이트 티켓 화면에 바로 반영됩니다.
  */
 
-const SECRET = 'CHANGE_ME';
+const ADMIN_ID = 'admin';
+const ADMIN_PASSWORD = 'CHANGE_ME';
+
 const SHEET_NAME = '예매';
+const SESSION_SECONDS = 6 * 60 * 60; // CacheService 최대 보관 시간
+const MAX_FAILS = 10; // 비밀번호를 이만큼 틀리면
+const LOCK_SECONDS = 30 * 60; // 이 시간 동안 로그인을 막습니다
 
 const HEADERS = [
   '예매번호', '토큰', '신청시각', '공연', '이름', '연락처', '매수', '금액',
@@ -42,27 +53,55 @@ function doPost(e) {
   } catch (err) {
     return out({ ok: false, error: 'bad_json' });
   }
-  if (!body || body.secret !== SECRET || SECRET === 'CHANGE_ME') {
-    return out({ ok: false, error: 'unauthorized' });
-  }
+  if (!body) return out({ ok: false, error: 'bad_json' });
 
   var sheet = getSheet();
   switch (body.action) {
     case 'create':
       return out(create(sheet, body.data || {}));
-    case 'list':
-      return out({ ok: true, rows: readRows(sheet) });
     case 'get':
       return out({
         ok: true,
-        rows: readRows(sheet).filter(function (r) { return r.code === body.code; }),
+        rows: readRows(sheet).filter(function (r) {
+          return r.code === String(body.code) && r.token === String(body.token);
+        }),
       });
+    case 'lookup':
+      return out({ ok: true, rows: lookup(sheet, body.name, body.phone) });
+    case 'login':
+      return out(login(body.id, body.password));
+    case 'list':
+      if (!isSession(body.session)) return out({ ok: false, error: 'unauthorized' });
+      return out({ ok: true, rows: readRows(sheet) });
     case 'update':
+      if (!isSession(body.session)) return out({ ok: false, error: 'unauthorized' });
       return out(update(sheet, body.code, body.status));
     default:
       return out({ ok: false, error: 'unknown_action' });
   }
 }
+
+/* ── 운영진 로그인 ─────────────────────────────────────────── */
+function login(id, password) {
+  var cache = CacheService.getScriptCache();
+  var fails = Number(cache.get('login_fails') || 0);
+  if (fails >= MAX_FAILS) return { ok: false, error: 'locked' };
+  if (ADMIN_PASSWORD === 'CHANGE_ME' || id !== ADMIN_ID || password !== ADMIN_PASSWORD) {
+    cache.put('login_fails', String(fails + 1), LOCK_SECONDS);
+    return { ok: false, error: 'wrong_password' };
+  }
+  cache.remove('login_fails');
+  var session = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  cache.put('session_' + session, '1', SESSION_SECONDS);
+  return { ok: true, session: session };
+}
+
+function isSession(session) {
+  if (!session) return false;
+  return CacheService.getScriptCache().get('session_' + String(session)) === '1';
+}
+
+/* ── 시트 ──────────────────────────────────────────────────── */
 
 /** 시트가 없으면 머리글·서식·상태 드롭다운까지 갖춰서 만듭니다. */
 function getSheet() {
@@ -99,7 +138,26 @@ function toObject(row) {
   return obj;
 }
 
+const digits = function (s) { return String(s || '').replace(/\D/g, ''); };
+
+function lookup(sheet, name, phone) {
+  var n = String(name || '').trim();
+  var p = digits(phone);
+  if (!n || p.length < 10) return [];
+  return readRows(sheet).filter(function (r) {
+    return r.name.trim() === n && digits(r.phone) === p;
+  });
+}
+
 function create(sheet, data) {
+  // 사이트를 거치지 않고 직접 들어오는 요청도 있을 수 있어서 한 번 더 확인합니다.
+  var name = String(data.name || '').trim();
+  var phone = String(data.phone || '');
+  var qty = Number(data.qty);
+  if (!name || name.length > 20) return { ok: false, error: 'bad_input' };
+  if (!/^01\d{8,9}$/.test(digits(phone))) return { ok: false, error: 'bad_input' };
+  if (!(qty >= 1 && qty <= 10)) return { ok: false, error: 'bad_input' };
+
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -115,13 +173,13 @@ function create(sheet, data) {
       code,
       token,
       new Date(),
-      String(data.showSlug || ''),
-      String(data.name || ''),
-      String(data.phone || ''),
-      Number(data.qty) || 0,
+      String(data.showSlug || '').slice(0, 40),
+      name,
+      phone.slice(0, 20),
+      qty,
       Number(data.amount) || 0,
-      String(data.depositor || ''),
-      String(data.team || ''),
+      String(data.depositor || name).slice(0, 20),
+      String(data.team || '').slice(0, 40),
       '입금대기',
       '',
       '',

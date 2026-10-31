@@ -6,10 +6,11 @@
 // 시트를 DB로 쓰는 이유: 운영진이 폰에서 바로 명단을 볼 수 있고,
 // 입금 확인을 Claude 가 구글 시트 연동으로 직접 표시할 수 있어서입니다.
 //
-//   TICKETS_SCRIPT_URL     Apps Script 웹 앱 주소 (…/exec)
-//   TICKETS_SCRIPT_SECRET  scripts/tickets.gs 의 SECRET 과 같은 값
+// 웹 앱 주소는 공개돼도 괜찮게 만들었습니다. 티켓은 예매번호+토큰, 조회는 이름+연락처,
+// 목록·상태 변경은 운영진 로그인 세션이 있어야 열립니다. 운영진 비밀번호는 저장소가
+// 공개라서 여기가 아니라 Apps Script 안에만 있습니다.
 //
-// 둘 다 비어 있으면 개발 환경에서만 메모리 저장소로 동작합니다.
+// SCRIPT_URL 이 비어 있으면 개발 환경에서만 메모리 저장소로 동작합니다.
 // 프로덕션에서도 화면 확인용으로 메모리 저장소를 쓰려면 TICKETS_MOCK=1.
 // ────────────────────────────────────────────────────────────────
 
@@ -17,10 +18,11 @@ import type { AdminTicket, TicketKey, TicketStatus } from '@/lib/tickets';
 import { formatPhone } from '@/lib/tickets';
 import type { Show, TicketState } from '@/lib/content';
 
-const SCRIPT_URL = process.env.TICKETS_SCRIPT_URL ?? '';
-const SCRIPT_SECRET = process.env.TICKETS_SCRIPT_SECRET ?? '';
+/** Apps Script 웹 앱 주소(…/exec). 환경변수가 있으면 그쪽이 우선합니다. */
+const DEFAULT_SCRIPT_URL = '';
+const SCRIPT_URL = process.env.TICKETS_SCRIPT_URL || DEFAULT_SCRIPT_URL;
 
-const USE_SCRIPT = SCRIPT_URL.length > 0 && SCRIPT_SECRET.length > 0;
+const USE_SCRIPT = SCRIPT_URL.length > 0;
 const USE_MOCK = !USE_SCRIPT && (process.env.NODE_ENV !== 'production' || process.env.TICKETS_MOCK === '1');
 
 /** 예매를 실제로 받을 수 있는 상태인지 */
@@ -110,7 +112,7 @@ async function callScript<T>(action: string, params: Record<string, unknown> = {
     res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ ...params, action, secret: SCRIPT_SECRET }),
+      body: JSON.stringify({ ...params, action }),
       cache: 'no-store',
       redirect: 'follow',
     });
@@ -176,6 +178,9 @@ function assertReady() {
   if (!isTicketingReady) throw new TicketStoreError('not_configured');
 }
 
+// 메모리 저장소의 운영진 계정. 실제 계정은 Apps Script 안에 있습니다.
+const MOCK_ADMIN = { id: 'admin', password: process.env.ADMIN_PASSWORD || 'admin', session: 'mock-session' };
+
 export async function createReservation(input: NewReservation): Promise<TicketKey> {
   assertReady();
   if (USE_MOCK) return mockCreate(input);
@@ -183,33 +188,53 @@ export async function createReservation(input: NewReservation): Promise<TicketKe
   return { code: res.code, token: res.token };
 }
 
-export async function listTickets(): Promise<StoredTicket[]> {
-  assertReady();
-  const rows = USE_MOCK ? mockRows : (await callScript<{ rows: SheetRow[] }>('list')).rows;
-  return rows.filter((r) => r.code).map(toTicket);
-}
-
 export async function getTicket(code: string, token: string): Promise<StoredTicket | null> {
   assertReady();
-  // 시트에서 메모를 지우는 등 사람이 고친 값도 바로 반영되도록 매번 새로 읽습니다.
-  const rows = USE_MOCK ? mockRows : (await callScript<{ rows: SheetRow[] }>('get', { code })).rows;
-  const row = rows.find((r) => String(r.code) === code && String(r.token) === token);
-  return row ? toTicket(row) : null;
+  // 시트에서 사람이 고친 값도 바로 반영되도록 매번 새로 읽습니다.
+  const rows = USE_MOCK
+    ? mockRows.filter((r) => r.code === code && r.token === token)
+    : (await callScript<{ rows: SheetRow[] }>('get', { code, token })).rows;
+  return rows[0] ? toTicket(rows[0]) : null;
 }
 
 export async function findTickets(name: string, phone: string): Promise<StoredTicket[]> {
+  assertReady();
   const want = digits(phone);
-  const all = await listTickets();
-  return all.filter((t) => t.name.trim() === name.trim() && digits(t.phone) === want);
+  const rows = USE_MOCK
+    ? mockRows.filter((r) => r.name.trim() === name.trim() && digits(r.phone) === want)
+    : (await callScript<{ rows: SheetRow[] }>('lookup', { name, phone: want })).rows;
+  return rows.map(toTicket);
 }
 
-export async function setTicketStatus(code: string, status: TicketStatus): Promise<StoredTicket | null> {
+/** 운영진 로그인. 맞으면 세션 문자열, 틀리면 TicketStoreError('wrong_password' | 'locked'). */
+export async function adminLogin(id: string, password: string): Promise<string> {
   assertReady();
   if (USE_MOCK) {
+    if (id !== MOCK_ADMIN.id || password !== MOCK_ADMIN.password) throw new TicketStoreError('wrong_password');
+    return MOCK_ADMIN.session;
+  }
+  return (await callScript<{ session: string }>('login', { id, password })).session;
+}
+
+function assertMockSession(session: string) {
+  if (session !== MOCK_ADMIN.session) throw new TicketStoreError('unauthorized');
+}
+
+export async function listTickets(session: string): Promise<StoredTicket[]> {
+  assertReady();
+  if (USE_MOCK) assertMockSession(session);
+  const rows = USE_MOCK ? mockRows : (await callScript<{ rows: SheetRow[] }>('list', { session })).rows;
+  return rows.filter((r) => r.code).map(toTicket);
+}
+
+export async function setTicketStatus(session: string, code: string, status: TicketStatus): Promise<StoredTicket | null> {
+  assertReady();
+  if (USE_MOCK) {
+    assertMockSession(session);
     const row = mockUpdate(code, status);
     return row ? toTicket(row) : null;
   }
-  const res = await callScript<{ row: SheetRow | null }>('update', { code, status: SHEET_STATUS[status] });
+  const res = await callScript<{ row: SheetRow | null }>('update', { session, code, status: SHEET_STATUS[status] });
   return res.row ? toTicket(res.row) : null;
 }
 

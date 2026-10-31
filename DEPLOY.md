@@ -118,25 +118,17 @@ Vercel 프로젝트 → **Settings → Domains** 에서 도메인 추가하면 �
 
 ---
 
-## 6. 관객 예매 켜기 (직접, 10분)
+## 6. 관객 예매 켜기 (직접, 5분)
 
 예매는 **구글 시트 한 장**에 쌓입니다. 결제 연동 없이 계좌이체로 받고, 입금 확인은 운영진이 처리합니다.
+Vercel 설정은 필요 없습니다.
 
-1. [sheets.new](https://sheets.new) 로 새 시트를 만들고 이름을 `밴드할래 예매` 로
-2. **확장 프로그램 → Apps Script** → 기본 코드를 지우고 `scripts/tickets.gs` 를 통째로 붙여넣기
-3. `const SECRET = 'CHANGE_ME';` 를 긴 임의 문자열로 바꾸고 저장
-4. **배포 → 새 배포 → 유형: 웹 앱**, 실행: **나**, 액세스: **모든 사용자** → 배포
+1. 예매 시트에서 **확장 프로그램 → Apps Script** → 기본 코드를 지우고 `scripts/tickets.gs` 를 통째로 붙여넣기
+2. `ADMIN_ID` / `ADMIN_PASSWORD` 를 운영진 계정으로 바꾸고 저장 (저장소가 공개라 비밀번호는 여기에만 둡니다)
+3. **배포 → 새 배포 → 유형: 웹 앱**, 실행: **나**, 액세스: **모든 사용자** → 배포
    - 권한 승인 화면에서 "Google에서 확인하지 않은 앱" 이 나오면 **고급 → 이동** (본인 스크립트라 안전)
-5. 나온 **웹 앱 URL**(`…/exec`)을 복사
-6. Vercel `mp4-user-ui` → Settings → Environment Variables
-
-| 키 | 값 |
-| --- | --- |
-| `TICKETS_SCRIPT_URL` | 5번 웹 앱 URL |
-| `TICKETS_SCRIPT_SECRET` | 3번 SECRET 값 |
-| `ADMIN_PASSWORD` | 운영진 페이지 비밀번호 |
-
-7. **Redeploy** — 공연 페이지 버튼이 `티켓 예매하기` 로 바뀌면 열린 것
+4. 나온 **웹 앱 URL**(`…/exec`)을 `lib/ticketStore.ts` 의 `DEFAULT_SCRIPT_URL` 에 넣고 푸시
+   — 공연 페이지 버튼이 `티켓 예매하기` 로 바뀌면 열린 것
 
 | 주소 | 용도 |
 | --- | --- |
