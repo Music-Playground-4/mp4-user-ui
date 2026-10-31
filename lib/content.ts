@@ -108,8 +108,8 @@ export interface Show {
   ticketPriceNote: string;
   status: ShowStatus;
   lineup: Band[];
-  /** 라인업 아래 한 줄 안내 */
-  lineupNote: string;
+  /** 라인업 아래 한 줄 안내. 없으면 생략합니다. */
+  lineupNote?: string;
   /**
    * 공연 포스터. 아직 없으면 비워두면 COMING SOON 자리로 렌더링됩니다.
    * 이미지는 public/posters/ 에 넣고 '/posters/파일명.png' 로 지정하세요.
@@ -193,7 +193,7 @@ export const SHOWS: Show[] = [
     ticketPrice: '10,000원',
     ticketPriceNote: '예매 · 현장 동일',
     status: 'upcoming',
-    // 세 팀 확정(2026.10). 네 번째 팀은 참가 취소로 다시 찾는 중입니다.
+    // 세 팀 확정(2026.10). 네 번째 팀이 참가를 취소해 세 팀으로 공연합니다.
     // 공연 순서가 아니라 확정 순서이고, 멤버 칩은 실명 대신 세션만 표기합니다.
     lineup: [
       {
@@ -238,9 +238,7 @@ export const SHOWS: Show[] = [
           { title: '물떼새' },
         ],
       },
-      { no: 'TEAM 04', slot: 'open' },
     ],
-    lineupNote: '한 자리가 아직 비어 있어요. 참여 문의는 아래에서 →',
     // 포스터가 나오면 public/posters/ 에 넣고 아래 주석을 풀어주세요.
     // poster: { src: '/posters/vol-01.png', alt: '밴드할래? VOL.01 포스터', width: 1414, height: 2000 },
     ticketing: {

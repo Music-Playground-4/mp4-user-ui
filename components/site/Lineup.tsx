@@ -136,7 +136,7 @@ export function Lineup({ show }: { show: Show }) {
         ))}
       </div>
 
-      <p className="lineup-note">{show.lineupNote}</p>
+      {show.lineupNote && <p className="lineup-note">{show.lineupNote}</p>}
     </section>
   );
 }
