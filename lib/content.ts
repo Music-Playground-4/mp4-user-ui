@@ -239,8 +239,12 @@ export const SHOWS: Show[] = [
         ],
       },
     ],
-    // 포스터가 나오면 public/posters/ 에 넣고 아래 주석을 풀어주세요.
-    // poster: { src: '/posters/vol-01.png', alt: '밴드할래? VOL.01 포스터', width: 1414, height: 2000 },
+    poster: {
+      src: '/posters/vol-01.webp',
+      alt: '밴드할래? VOL.01 포스터 — 2026.11.14(토) 오후 6시 백라인스테이지, 라인업 박씨물고온제비 · 너트피킹 · 광 . 유랑단',
+      width: 1333,
+      height: 2000,
+    },
     ticketing: {
       price: 10000,
       maxPerOrder: 6,
