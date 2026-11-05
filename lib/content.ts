@@ -186,7 +186,7 @@ export const SHOWS: Show[] = [
     time: '오후 6시',
     timeNote: '· 5시 30분 입장',
     venue: '홍대 백라인스테이지',
-    venueNote: '서울 마포구',
+    venueNote: '서울 마포구 와우산로18길 20 지하1층',
     venueMapUrl: 'https://naver.me/x4lvTAV3',
     // 예매 시트(TICKETS_SCRIPT_URL)가 연결되지 않은 배포에서는 자동으로 '오픈 전'으로 보입니다.
     ticketState: 'presale',
@@ -194,21 +194,20 @@ export const SHOWS: Show[] = [
     ticketPriceNote: '예매 · 현장 동일',
     status: 'upcoming',
     // 세 팀 확정(2026.10). 네 번째 팀이 참가를 취소해 세 팀으로 공연합니다.
-    // 공연 순서가 아니라 확정 순서이고, 멤버 칩은 실명 대신 세션만 표기합니다.
+    // 순서는 포스터 표기 순서이고, 멤버 칩은 실명 대신 세션만 표기합니다.
     lineup: [
       {
         no: 'TEAM 01',
-        // 점 양쪽 띄어쓰기까지 팀이 요청한 표기 그대로입니다.
-        name: '광 . 유랑단',
-        members: ['보컬 · 기타', '기타', '베이스', '드럼'],
-        photo: { src: '/bands/gwang-yurangdan-logo.webp', alt: '광 . 유랑단 로고', kind: 'logo' },
+        name: '박씨물고온제비',
+        members: ['보컬', '기타 ×3', '베이스', '키보드', '드럼', '바이올린', '색소폰'],
         setlist: [
-          { title: '시작이반' },
-          { title: '일곱번 넘어져도' },
-          { title: '단단한 태세' },
-          { title: '저녁 도깨비' },
-          { title: '집으로 가는 길' },
-          { title: '이 노래가 너에게 닿기를' },
+          { title: '패배자에게 앵콜은 필요 없어' },
+          { title: '봄팔이' },
+          { title: '마타사부로' },
+          { title: '퍼레이드' },
+          { title: '시쓰기와 커피' },
+          { title: '도작' },
+          { title: '물떼새' },
         ],
       },
       {
@@ -226,16 +225,17 @@ export const SHOWS: Show[] = [
       },
       {
         no: 'TEAM 03',
-        name: '박씨물고온제비',
-        members: ['보컬', '기타 ×3', '베이스', '키보드', '드럼', '바이올린', '색소폰'],
+        // 점 양쪽 띄어쓰기까지 팀이 요청한 표기 그대로입니다.
+        name: '광 . 유랑단',
+        members: ['보컬 · 기타', '기타', '베이스', '드럼'],
+        photo: { src: '/bands/gwang-yurangdan-logo.webp', alt: '광 . 유랑단 로고', kind: 'logo' },
         setlist: [
-          { title: '패배자에게 앵콜은 필요 없어' },
-          { title: '봄팔이' },
-          { title: '마타사부로' },
-          { title: '퍼레이드' },
-          { title: '시쓰기와 커피' },
-          { title: '도작' },
-          { title: '물떼새' },
+          { title: '시작이반' },
+          { title: '일곱번 넘어져도' },
+          { title: '단단한 태세' },
+          { title: '저녁 도깨비' },
+          { title: '집으로 가는 길' },
+          { title: '이 노래가 너에게 닿기를' },
         ],
       },
     ],
