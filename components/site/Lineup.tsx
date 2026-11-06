@@ -61,7 +61,13 @@ function BandCard({ band }: { band: Band }) {
 
   return (
     <article className={cardClass}>
-      <div className={band.photo ? `band-photo band-photo--${band.photo.kind}` : 'band-photo'}>
+      <div
+        className={
+          band.photo
+            ? `band-photo band-photo--${band.photo.kind}${band.photo.backdrop === 'light' ? ' band-photo--light' : ''}`
+            : 'band-photo'
+        }
+      >
         {band.photo ? (
           <Image
             src={band.photo.src}

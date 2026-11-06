@@ -77,6 +77,11 @@ export interface BandPhoto {
    * 카드 사진 칸은 가로로 넓어서 정사각 로고를 꽉 채우면 아래쪽 팀명이 잘립니다.
    */
   kind: 'photo' | 'logo';
+  /**
+   * 로고 양옆에 남는 칸의 색. 로고 배경이 밝으면 'light' 로 카드색과 이어 붙이고,
+   * 어두우면 'dark'(기본)로 먹색을 깝니다.
+   */
+  backdrop?: 'dark' | 'light';
 }
 
 export interface SetlistSong {
@@ -228,7 +233,7 @@ export const SHOWS: Show[] = [
         // 점 양쪽 띄어쓰기까지 팀이 요청한 표기 그대로입니다.
         name: '광 . 유랑단',
         members: ['보컬 · 기타', '기타', '베이스', '드럼'],
-        photo: { src: '/bands/gwang-yurangdan-logo.webp', alt: '광 . 유랑단 로고', kind: 'logo' },
+        photo: { src: '/bands/gwang-yurangdan-logo-2.webp', alt: '광 . 유랑단 로고', kind: 'logo', backdrop: 'light' },
         setlist: [
           { title: '시작이반' },
           { title: '일곱번 넘어져도' },

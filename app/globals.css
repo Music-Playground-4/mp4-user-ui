@@ -691,6 +691,12 @@ img {
 }
 .band-photo--logo .band-photo-img {
   object-fit: contain;
+  padding: 14px; /* 원형 로고가 칸 위아래에 닿지 않도록 */
+}
+/* 배경이 밝은 로고는 카드색과 이어 붙여 칸 경계가 보이지 않게 */
+.band-photo--logo.band-photo--light {
+  background: var(--cream-card);
+  border-bottom: 1px solid var(--cream-alt);
 }
 /* 이미지 위에 번호 스탬프가 올라가도록 */
 .band-photo .band-no {
