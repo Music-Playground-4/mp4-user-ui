@@ -130,7 +130,7 @@ export interface Show {
 export const TICKET_ACCOUNT = {
   bank: '토스뱅크',
   number: '1002-7460-2611',
-  holder: '밴드할래',
+  holder: '김강태',
 } as const;
 
 export interface ShowTicketing {
@@ -251,7 +251,7 @@ export const SHOWS: Show[] = [
       closesAt: '2026-11-13T23:59:59+09:00',
       closesLabel: '11월 13일(금) 자정',
       depositNote: '신청 후 24시간 안에 입금해 주세요. 기한이 지나면 신청이 취소될 수 있어요.',
-      // 관객 환불 규정은 운영진 확정 전 기본안입니다. 바뀌면 여기만 고치세요.
+      // 관객 환불 규정 (2026.11 운영진 확정). 바뀌면 여기만 고치세요.
       refund: [
         '공연 3일 전(11/11)까지 취소하면 전액 환불해 드려요.',
         '11/12부터는 환불이 어려워요. 대신 다른 분께 양도는 가능해요.',
